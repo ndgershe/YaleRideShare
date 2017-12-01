@@ -1,6 +1,6 @@
 $("#myselect").on("change", function() {
     $("#" + $(this).val()).show().siblings();
-})
+});
 
 let airport = document.airport.value;
 let date = document.date.value;

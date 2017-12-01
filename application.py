@@ -28,7 +28,7 @@ app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
 # Configure CS50 Library to use SQLite database
-db = SQL("sqlite:///uber.db")
+db = SQL("postgres://czznryphemnxjs:4a6625d3983a3befabf184350cfc1d43b1d285b396838bb7255421f1f32c3267@ec2-184-73-206-155.compute-1.amazonaws.com:5432/d36i73dhm3jssb")
 
 
 @app.route("/")
@@ -133,10 +133,11 @@ def order():
                 diffs = []
                 for i in times:
                     FMT = '%H:%M'
-                    diffs.append( abs(datetime.strptime(times[i], FMT) - datetime.strptime(otime, FMT))
+                    diffs.append( abs((datetime.strptime(times[i], FMT) - datetime.strptime(otime, FMT)).total_minutes()))
 
                 # makes list of tupples sorted by time difference
-                zipped = list(zip(rows,diffs))
+                zipped = []
+                zipped = list( zip(rows,diffs))
                 zipped.sort(key=lambda tup: tup[1])
 
                 # makes list of sorted rideids
@@ -147,6 +148,10 @@ def order():
                 # begins message of email
                 message = "We found one or more matches:"
 
+                emails = []
+                names = []
+                phones = []
+
                 # finds information for email
                 for i in rides:
                     emails.append(db.execute("SELECT email FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0])
@@ -155,7 +160,7 @@ def order():
 
                 # creates message of all info
                 for i in rides:
-                    message = message + "\n" + names[i] +"'s optimum time is " + time[i]  + "\n     email: " + email[i] + " phone #: " + phone[i] + "\n"
+                    message = message + "\n" + names[i] +"'s optimum time is " + times[i]  + "\n     email: " + emails[i] + " phone #: " + phones[i] + "\n"
 
                 # gets user email
                 email = db.execute("SELECT email FROM users WHERE userid=:userid", userid = id)[0]
@@ -293,13 +298,14 @@ def register():
         num_digits = 0
         dash = False
 
-        for i in range(phone.length):
+        for i in range(len(phone)):
             if (i == 3 or i == 7) and phone[i] == "-":
                 dash = True
                 continue
-            if not phone[i].isdigit():
+            elif not phone[i].isdigit():
                 return apology("Must enter valid phone number", 400)
-                num_digits = num_digits + 1
+
+            num_digits = num_digits + 1
 
         if num_digits != 10:
             return apology("Must enter valid phone number", 400)
@@ -398,19 +404,27 @@ def closest():
     # User reached route via POST (as by submitting a form via POST)
     if request.method == "POST":
 
+        id = session["user_id"]
+
         rideid = request.form.get("rideid")
         type = db.execute("SELECT type FROM requests WHERE rideid = :rideid", rideid = rideid)[0]
         etime = db.execute("SELECT etime FROM requests WHERE rideid = :rideid", rideid = rideid)[0]
+        airport = db.execute("SELECT airport FROM requests WHERE rideid=:rideid", rideid = rideid)[0]
+        location = db.execute("SELECT location FROM requests WHERE rideid=:rideid", rideid = rideid)[0]
+        date = db.execute("SELECT date FROM requests WHERE rideid=:rideid", rideid = rideid)[0]
+        number = db.execute("SELECT number FROM requests WHERE rideid=:rideid", rideid = rideid)[0]
+
+        fnumber = 6 - number
 
         if type == 0:
             # search for matches for departure
             rows = db.execute("SELECT rideid FROM requests WHERE userid=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime>=:otime AND etime<=:otime OR id=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime<=:etime AND etime<=:etime ",
-                              id=id, airport=airport, date=date, type=type, otime=otime, etime=etime, fnumber=fnumber, location=location)
+                              id=id, airport=airport, date=date, type=type, fnumber=fnumber, location=location)
 
         else:
             # search for matches for arrival
             rows = db.execute("SELECT rideid FROM requests WHERE (userid=:id AND airport=:airport AND date=:date AND type = :type AND number<=:fnumber AND otime>=:otime AND otime<=:etime) OR (id=:id AND airport=:airport AND date=:date AND type = :type AND number<=:fnumber AND otime<=:otime AND etime>=:otime)",
-                              id=id, airport=airport, date=date, type=type, otime=otime, etime=etime, fnumber=fnumber)
+                              id=id, airport=airport, date=date, type=type,  fnumber=fnumber)
 
         if rows:
             # makes list of times
@@ -422,7 +436,7 @@ def closest():
             diffs = []
             for i in times:
                 FMT = '%H:%M'
-                diffs.append( abs(datetime.strptime(times[i], FMT) - datetime.strptime(etime, FMT))
+                diffs.append( abs((datetime.strptime(times[i], FMT) - datetime.strptime(etime, FMT)).total_minutes()))
 
             # makes list of tupples sorted by time difference
             zipped = list(zip(rows,diffs))
@@ -465,3 +479,8 @@ def errorhandler(e):
 # listen for errors
 for code in default_exceptions:
     app.errorhandler(code)(errorhandler)
+
+
+
+if __name__ == "__main__":
+    app.run()

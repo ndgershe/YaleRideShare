@@ -5,7 +5,11 @@
 {% endblock %}
 
 {% block main %}
-    <form action="/order" id="registration" method="post">
+    <head>
+        <script src="order.js"></script>
+    </head>
+    <body>
+        <form action="/order" id="registration" method="post">
         <b>Airport</b>
         <div class="form-group">
             <select name = "airport">
@@ -52,7 +56,7 @@
         <div class="form-group">
             <input autocomplete="off" autofocus class="form-control" name="etime" type="time" placeholder="Latest time of pickup"/>
         </div>
-        <button class="btn btn-primary" type="submit">Order</button>
+        <button class="btn btn-primary" onclick="arrival()">Order</button>
         </form>
 
         <form name="departure" id="departure" style="display:none">
@@ -67,30 +71,7 @@
                     <option value="science">Science Hill</option>
                 </select>
             </div>
-            <button class="btn btn-primary" type="submit">Order</button>
+            <button class="btn btn-primary" onclick="departure()">Order</button>
         </form>
-
-        <script>
-            $("#myselect").on("change", function() {
-                $("#" + $(this).val()).show().siblings();
-            })
-
-            let airport = document.airport.value;
-            let date = document.date.value;
-            let otime = document.otime.value;
-            let number = document.number.value;
-
-            let departure = document.getElementById("departure");
-            departure.onsubmit = function() {
-
-            }
-
-            let arrival = document.getElementById("arrival");
-            arrival.onsubmit = function() {
-
-            }
-        </script>
-
-
-
+    </body>
 {% endblock %}
