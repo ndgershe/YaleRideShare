@@ -1,0 +1,28 @@
+{% extends "layout.html" %}
+
+
+{% block main %}
+    <table class = "table table-striped">
+    <thead><tr><th>Airport</th><th>Type</th><th>Date</th></tr></thead>
+    <tbody>
+    {% for ride in rides %}
+        {% if ride.type == 0 %}
+            <tr>
+                <td>{{ ride.airport }}</td>
+                <td>Departure</td>
+                <td>{{ ride.date }}</td>
+            </tr>
+        {% endif %}
+        {% if ride.type == 1 %}
+            <tr>
+                <td>{{ ride.airport }}</td>
+                <td>Arrival</td>
+                <td>{{ ride.date }}</td>
+            </tr>
+        {% endif %}
+    {% endfor %}
+    </tbody>
+    </table>
+
+
+{% endblock %}

@@ -1,0 +1,19 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Order
+{% endblock %}
+
+{% block main %}
+    <form action="/order" method="post">
+        <b>Departure or Arrival</b>
+        <div class="form-group">
+            <select name = "type">
+                <option value="" disabled selected>--Select an option--</option>
+                <option value="0">Departure</option>
+                <option value="1">Arrival</option>
+            </select>
+        </div>
+        <button class="btn btn-primary" type="submit">Submit</button>
+    </form>
+{% endblock %}
