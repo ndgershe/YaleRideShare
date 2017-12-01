@@ -1,0 +1,202 @@
+#!/bin/bash
+
+set -e
+
+# ensure workspace has disk size < 5GB
+if [ $(df --output=size / |  awk 'NR==2 {print $1}') -lt 5242880 ]; then
+    echo "You have an old workspace. See https://cs50.ly/disk for instructions on how to upgrade your workspace!"
+    exit 1
+fi
+
+# suppress CS50 compilation preferences
+unset CC CFLAGS LDLIBS
+
+# remove old files if new update50 exists
+if [ -f /home/ubuntu/.cs50/bin/update50 ]; then
+    rm -f /home/ubuntu/{.client50,.domain50,.password50,.prompt50}
+    rm -f /home/ubuntu/bin/{.info50,debug50,update50}
+fi
+
+echo "Adding external repos..."
+
+# install apt-transport-https
+sudo rm -f /etc/apt/sources.list.d/github_git-lfs.list
+sudo apt-get update && sudo apt-get install -y apt-transport-https
+
+# add external apt repos
+# install cs50 ppa
+if [ ! -f /etc/apt/sources.list.d/cs50-ppa-trusty.list ]; then
+    sudo add-apt-repository -y ppa:cs50/ppa
+    sudo apt-get update -o Dir::Etc::sourcelist="sources.list.d/cs50-ppa-trusty.list" \
+        -o Dir::Etc::sourceparts="-"
+fi
+
+# install git-core ppa
+if [ ! -f /etc/apt/sources.list.d/git-core-ppa-trusty.list ]; then
+    sudo add-apt-repository ppa:git-core/ppa
+    sudo apt-get update -o Dir::Etc::sourcelist="sources.list.d/git-core-ppa-trusty.list" \
+        -o Dir::Etc::sourceparts="-"
+fi
+
+# install git-lfs apt repo
+# https://packagecloud.io/github/git-lfs/install#manual
+if [ ! -f /etc/apt/sources.list.d/github_git-lfs.list ]; then
+    curl -sSL https://packagecloud.io/github/git-lfs/gpgkey | sudo apt-key add -
+    echo "deb https://packagecloud.io/github/git-lfs/ubuntu/ trusty main" | sudo tee /etc/apt/sources.list.d/github_git-lfs.list && \
+        echo "deb-src https://packagecloud.io/github/git-lfs/ubuntu/ trusty main" | sudo tee -a /etc/apt/sources.list.d/github_git-lfs.list
+    sudo chmod a+r /etc/apt/sources.list.d/github_git-lfs.list
+    sudo apt-get update -o Dir::Etc::sourcelist="sources.list.d/github_git-lfs.list" \
+        -o Dir::Etc::sourceparts="-"
+fi
+
+# install pgloader apt repo
+# https://wiki.postgresql.org/wiki/Apt
+if [ ! -f /etc/apt/sources.list.d/pgdg.list ]; then
+    echo "deb http://apt.postgresql.org/pub/repos/apt/ $(lsb_release -cs)-pgdg main" | sudo tee /etc/apt/sources.list.d/pgdg.list
+    curl -sSL https://www.postgresql.org/media/keys/ACCC4CF8.asc | sudo apt-key add -
+    sudo apt-get update -o Dir::Etc::sourcelist="sources.list.d/pgdg.list" \
+        -o Dir::Etc::sourceparts="-"
+fi
+
+echo "Updating sources..."
+# try to fix dpkg before updating
+sudo dpkg --configure -a
+
+# if requested, flush the apt-get Packages file cache
+if [ "$1" == "-f" ]; then
+    echo "CLEARING PACKAGE CACHE"
+    sudo rm -rf /var/lib/apt/lists/*
+fi
+
+sudo apt-get update
+
+echo "Reinstalling ide package..."
+sudo -E apt-get -o Dpkg::Options::="--force-confnew" -o Dpkg::Options::="--force-overwrite" install --reinstall --yes --force-yes --assume-yes ide50
+
+echo "Installing other packages..."
+
+# node 8.4.0
+export NVM_DIR="/home/ubuntu/.nvm"
+. $NVM_DIR/nvm.sh
+nvm install 8.4.0
+nvm alias default 8.4.0
+
+# composer
+# https://www.digitalocean.com/community/tutorials/how-to-install-and-use-composer-on-ubuntu-14-04
+if ! which composer &> /dev/null; then
+    curl -sS https://getcomposer.org/installer | \
+        sudo php -- --install-dir=/usr/local/bin --filename=composer
+fi
+
+# hub
+# https://hub.github.com/
+# http://stackoverflow.com/a/27869453
+if ! which hub &> /dev/null; then
+    mkdir /tmp/hub-linux-amd64 && \
+        curl -s -L https://github.com/github/hub/releases/latest | \
+        egrep -o '/github/hub/releases/download/.*/hub-linux-amd64-.*.tgz' | \
+        wget --base=http://github.com/ -i - -O - | \
+        tar xvz -C /tmp/hub-linux-amd64 --strip-components 1 && \
+        sudo /tmp/hub-linux-amd64/install && \
+        rm -rf /tmp/hub-linux-amd64
+fi
+
+# pyenv
+export PYENV_ROOT="/opt/pyenv"
+if ! which pyenv &> /dev/null; then
+    sudo apt-get install -y \
+        build-essential \
+        curl \
+        libbz2-dev \
+        libncurses5-dev \
+        libncursesw5-dev \
+        libreadline-dev \
+        libsqlite3-dev \
+        libssl-dev \
+        llvm \
+        wget \
+        xz-utils \
+        zlib1g-dev
+    wget -P /tmp https://github.com/yyuu/pyenv/archive/master.zip
+    unzip -q -d /tmp /tmp/master.zip
+    rm -f /tmp/master.zip
+    sudo mv /tmp/pyenv-master /opt/pyenv
+fi
+
+echo "FYI: installing Python may take a while. Thank you for your patience! <3"
+sudo chown -R ubuntu:ubuntu /opt/pyenv
+/opt/pyenv/bin/pyenv install --skip-existing 3.6.0
+/opt/pyenv/bin/pyenv global 3.6.0
+
+echo "Removing unneeded packages..."
+sudo apt-get autoremove -y
+
+# ensure npm prefix is writable
+# some old workspaces have this prefix mounted read-only
+npm_prefix="$(npm get prefix -g)"
+if [ ! -w "$npm_prefix" ]; then
+    npm set prefix -g "${NVM_DIR:=~/.nvm}/versions/node/$(node --version)"
+fi
+
+echo "Installing npm packages..."
+npm install -g github:indexzero/http-server
+
+echo "Installing Python packages..."
+
+# clean up pip's build cache
+sudo rm -rf /tmp/pip_build_root/*
+
+# use pip for python3.6
+unset PYTHONPATH
+export PATH="$PYENV_ROOT/bin:$PYENV_ROOT/shims:$PATH"
+
+# install python packages
+PYTHON_PACKAGES="check50==2.2.1 \
+    cs50==2.3.2 \
+    feedparser \
+    Flask \
+    Flask-AutoIndex \
+    Flask-JSGlue \
+    Flask-SQLAlchemy \
+    Flask-Session \
+    help50==2.0.0 \
+    nltk \
+    passlib \
+    plotly \
+    pylint \
+    pylint_django \
+    pylint_flask \
+    render50==2.3.1 \
+    SQLAlchemy \
+    style50==2.4.0 \
+    submit50==2.4.6 \
+    termcolor \
+    twython \
+    virtualenv"
+
+sudo -H pip3 install $PYTHON_PACKAGES
+
+# create pylint3 as symlink to pylint
+ln -sf /opt/pyenv/versions/3.6.0/bin/{pylint,pylint3}
+
+/opt/pyenv/bin/pyenv rehash
+
+echo "Installing nltk data..."
+sudo python -m nltk.downloader -d /usr/share/nltk_data/ punkt &> /dev/null
+
+# install ruby 2.4.0 and make it default
+rvm install ruby-2.4.0 --default &> /dev/null
+
+echo "Update complete!"
+
+# restart terminals and reload page
+if [ ${IDE_OFFLINE+x} ]; then
+    C9="/var/c9sdk/bin/c9"
+else
+    C9="/mnt/shared/sbin/c9"
+fi
+
+# avoid running when building Docker image
+if [ -x "$C9" ]; then
+    $C9 exec complete_update
+fi

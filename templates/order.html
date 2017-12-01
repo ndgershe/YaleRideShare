@@ -12,7 +12,7 @@
         <form action="/order" id="registration" method="post">
         <b>Airport</b>
         <div class="form-group">
-            <select name = "airport">
+            <select name = "airport" id="airport">
                 <option value="" disabled selected>--Select your airport--</option>
                 <option value="hvn">Tweed New Haven Airport (HVN)</option>
                 <option value="bdl">Bradley International Airport (BDL)</option>
@@ -24,14 +24,14 @@
         </div>
         <b>Date</b>
         <div class="form-group">
-            <input autocomplete="off" autofocus class="form-control" name="date" type="date" placeholder="Date"/>
+            <input autocomplete="off" autofocus class="form-control" name="date" id="date" type="date" placeholder="Date"/>
         </div>
         <b>Optimal Pickup Time</b>
         <div class="form-group">
-            <input autocomplete="off" autofocus class="form-control" name="otime" type="time" placeholder="Optimal time of pickup"/>
+            <input autocomplete="off" autofocus class="form-control" name="otime" id="otime" type="time" placeholder="Optimal time of pickup"/>
         </div>
         <div class="form-group">
-            <select name = "number">
+            <select name = "number" id="number">
                 <option value="" disabled selected>--Number of passengers in your party--</option>
                 <option value="1">1</option>
                 <option value="2">2</option>
@@ -54,7 +54,7 @@
         <form name="arrival" id="arrival" style="display:none">
         <b>Latest Time of Pickup</b>
         <div class="form-group">
-            <input autocomplete="off" autofocus class="form-control" name="etime" type="time" placeholder="Latest time of pickup"/>
+            <input autocomplete="off" autofocus class="form-control" name="etime" id="arrivaletime" type="time" placeholder="Latest time of pickup"/>
         </div>
         <button class="btn btn-primary" onclick="arrival()">Order</button>
         </form>
@@ -62,7 +62,7 @@
         <form name="departure" id="departure" style="display:none">
             <b>Earliest Time of Pickup</b>
             <div class="form-group">
-                <input autocomplete="off" autofocus class="form-control" name="etime" type="time" placeholder="Earliest time of pickup"/>
+                <input autocomplete="off" autofocus class="form-control" name="etime" id="departureetime" type="time" placeholder="Earliest time of pickup"/>
             </div>
             <div class="form-group">
                 <select name = "location">

@@ -1,4 +1,4 @@
-from cs50 import SQL
+import psycopg2
 from flask import Flask, flash, redirect, render_template, request, session
 from flask_session import Session
 from tempfile import mkdtemp
@@ -27,9 +27,20 @@ app.config["SESSION_PERMANENT"] = False
 app.config["SESSION_TYPE"] = "filesystem"
 Session(app)
 
-# Configure CS50 Library to use SQLite database
-db = SQL("postgres://czznryphemnxjs:4a6625d3983a3befabf184350cfc1d43b1d285b396838bb7255421f1f32c3267@ec2-184-73-206-155.compute-1.amazonaws.com:5432/d36i73dhm3jssb")
+# Configure CS50 Library to use Postgres database
+conn = psycopg2.connect("postgres://czznryphemnxjs:4a6625d3983a3befabf184350cfc1d43b1d285b396838bb7255421f1f32c3267@ec2-184-73-206-155.compute-1.amazonaws.com:5432/d36i73dhm3jssb")
 
+def db_execute(*args, **kwargs):
+    try:
+        cur = conn.cursor()
+        cur.execute(*args, **kwargs)
+        conn.commit()
+        results = cur.fetchall()
+        cur.close()
+        return results
+    except Exception as e:
+        print('ignoring error:', e)
+        conn.rollback()
 
 @app.route("/")
 #@login_required
@@ -93,20 +104,20 @@ def order():
         id = session["user_id"]
 
         # add to requests
-        db.execute("INSERT INTO requests (userid, airport, date, otime, etime, number, type, location) VALUES (:id, :airport, :date, :otime, :etime, :number, :type, :location)",
+        db_execute("INSERT INTO requests (userid, airport, date, otime, etime, number, type, location) VALUES (:id, :airport, :date, :otime, :etime, :number, :type, :location)",
                        id=id, airport=airport, date=date, otime=otime, etime=etime, number=number, type=type, location=location)
 
         # add to orders
-        db.execute("INSERT INTO requests (userid, airport, date, otime, etime, number, type) VALUES (:id, :airport, :date, :otime, :etime, :number, :type)",
+        db_execute("INSERT INTO requests (userid, airport, date, otime, etime, number, type) VALUES (:id, :airport, :date, :otime, :etime, :number, :type)",
                    id=id, airport=airport, date=date, otime=otime, etime=etime, number=number, type=type)
 
         # gets ride number
-        rows = db.execute("SELECT rideid FROM requests where userid=:id AND airport=:airport AND date=:date AND otime=:otime AND etime=:etime AND number=:number AND type=:type ",
+        rows = db_execute("SELECT rideid FROM requests where userid=:id AND airport=:airport AND date=:date AND otime=:otime AND etime=:etime AND number=:number AND type=:type ",
                           id=id, airport=airport, date=date, otime=otime, etime=etime, number=number, type=type)
         ride = rows[0]
 
         # updates history
-        db.execute("INSERT INTO history (rideid, status) VALUES (:ride, 1)",
+        db_execute("INSERT INTO history (rideid, status) VALUES (:ride, 1)",
                    ride=ride)
 
         # start of matching
@@ -115,19 +126,19 @@ def order():
 
         if type == 0:
             # search for matches for departure
-            rows = db.execute("SELECT rideid FROM requests WHERE userid=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime>=:otime AND etime<=:otime OR id=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime<=:etime AND etime<=:etime ",
+            rows = db_execute("SELECT rideid FROM requests WHERE userid=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime>=:otime AND etime<=:otime OR id=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime<=:etime AND etime<=:etime ",
                               id=id, airport=airport, date=date, type=type, otime=otime, etime=etime, fnumber=fnumber, location=location)
 
         else:
             # search for matches for arrival
-            rows = db.execute("SELECT rideid FROM requests WHERE (userid=:id AND airport=:airport AND date=:date AND type = :type AND number<=:fnumber AND otime>=:otime AND otime<=:etime) OR (id=:id AND airport=:airport AND date=:date AND type = :type AND number<=:fnumber AND otime<=:otime AND etime>=:otime)",
+            rows = db_execute("SELECT rideid FROM requests WHERE (userid=:id AND airport=:airport AND date=:date AND type = :type AND number<=:fnumber AND otime>=:otime AND otime<=:etime) OR (id=:id AND airport=:airport AND date=:date AND type = :type AND number<=:fnumber AND otime<=:otime AND etime>=:otime)",
                               id=id, airport=airport, date=date, type=type, otime=otime, etime=etime, fnumber=fnumber)
 
             if rows:
                 # makes list of times
                 times = []
                 for i in rows:
-                    times.append( db.execute("SELECT otime FROM requests WHERE rideid=:rideid", rideid = i)[0])
+                    times.append( db_execute("SELECT otime FROM requests WHERE rideid=:rideid", rideid = i)[0])
 
                 # makes list of time differences
                 diffs = []
@@ -154,16 +165,16 @@ def order():
 
                 # finds information for email
                 for i in rides:
-                    emails.append(db.execute("SELECT email FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0])
-                    names.append(db.execute("SELECT name FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0])
-                    phones.append(db.execute("SELECT phone FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0])
+                    emails.append(db_execute("SELECT email FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0])
+                    names.append(db_execute("SELECT name FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0])
+                    phones.append(db_execute("SELECT phone FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0])
 
                 # creates message of all info
                 for i in rides:
                     message = message + "\n" + names[i] +"'s optimum time is " + times[i]  + "\n     email: " + emails[i] + " phone #: " + phones[i] + "\n"
 
                 # gets user email
-                email = db.execute("SELECT email FROM users WHERE userid=:userid", userid = id)[0]
+                email = db_execute("SELECT email FROM users WHERE userid=:userid", userid = id)[0]
 
                 # sends email to person who requested a ride
                 server = smtplib.SMTP("smtp.gmail.com", 587)
@@ -172,8 +183,8 @@ def order():
                 server.sendmail("yaleubershare@gmail.com", email, message)
 
                 # gets user name and phone
-                name = db.execute("SELECT name FROM users WHERE userid=:userid", userid = id)[0]
-                phone = db.execute("SELECT phone FROM users WHERE userid=:userid", userid = id)[0]
+                name = db_execute("SELECT name FROM users WHERE userid=:userid", userid = id)[0]
+                phone = db_execute("SELECT phone FROM users WHERE userid=:userid", userid = id)[0]
 
                 # create message for matches
                 message = "Somebody matched with your uber request! Here is their information: \n" + name + "'s optimum time is " + otime  + "\n     email: " + email + " phone #: " + phone + "\n"
@@ -197,7 +208,7 @@ def order():
 def history():
     """Show history of transactions"""
     # stores index
-    rides = db.execute("SELECT * FROM requests WHERE userid = :userid", userid=session["user_id"])
+    rides = db_execute("SELECT * FROM requests WHERE userid = :userid", userid=session["user_id"])
 
     if rides != None:
         return render_template("history.html", rides=rides)
@@ -224,11 +235,12 @@ def login():
             return apology("must provide password", 403)
 
         # Query database for username
-        rows = db.execute("SELECT * FROM users WHERE username = :username",
+        rows = db_execute("SELECT * FROM users WHERE username = :username",
                           username=request.form.get("username"))
+        print(rows)
 
         # Ensure username exists and password is correct
-        if len(rows) != 1 or not check_password_hash(rows[0]["password"], request.form.get("password")):
+        if rows == None or not check_password_hash(rows[0]["password"], request.form.get("password")):
             return apology("invalid username and/or password", 403)
 
         # Remember which user has logged in
@@ -316,15 +328,18 @@ def register():
         # hashes password
         hash = generate_password_hash(request.form.get("password"))
 
+
+
         # inserts new user in data base and checks username
-        rows = db.execute("INSERT INTO users (username, password, name, surname, email, phone) VALUES(:username, :hash, :name, :surname, :email, :phone)",
-                          username=username, hash=hash, name=name, surname=surname, email=email, phone=phone)
+        rows = db_execute("INSERT INTO users ( username, password, name, surname, email, phone ) VALUES( :id, :hash, :name, :surname, :email, :phone ) RETURNING phone",
+                          id=username, hash=hash, name=name, surname=surname, email=email, phone=phone)
+        print(rows)
 
         if not rows:
             return apology("Username is taken :(", 400)
 
          # Query database for username
-        rows = db.execute("SELECT * FROM users WHERE username = :username",
+        rows = db_execute("SELECT * FROM users WHERE username = :username",
                           username=username)
 
         # Remember which user has logged in
@@ -345,13 +360,13 @@ def cancel():
     # User reached route via POST (as by submitting a form via POST)
     if request.method == "POST":
         rideid = request.form.get("rideid")
-        db.execute("DELETE FROM requests WHERE rideid = :rideid")
+        db_execute("DELETE FROM requests WHERE rideid = :rideid")
         return redirect("/")
 
     # User reached route via GET (as by clicking a link or via redirect)
     else:
         id = session["user_id"]
-        rides = db.execute(
+        rides = db_execute(
             "SELECT * FROM requests WHERE userid = :id", id=id)
         return render_template("cancel.html", rides=rides)
 
@@ -377,7 +392,7 @@ def settings():
             newpass = request.form.get("newpass")
             verification = request.form.get("verification")
 
-            row = db.execute("SELECT password FROM users WEHRE userid = :id", id=session["userid"])
+            row = db_execute("SELECT password FROM users WEHRE userid = :id", id=session["userid"])
 
             # ensure user inputs valid information
             if generate_password_hash(oldpass) != row[0]["password"]:
@@ -387,7 +402,7 @@ def settings():
                 return apology("new passwords must match", 400)
 
             # update password
-            db.execute("UPDATE users SET password = :newpass where id = :id",
+            db_execute("UPDATE users SET password = :newpass where id = :id",
                        newpass=generate_password_hash(newpass), id=session["user_id"])
 
             return redirect("/")
@@ -407,30 +422,30 @@ def closest():
         id = session["user_id"]
 
         rideid = request.form.get("rideid")
-        type = db.execute("SELECT type FROM requests WHERE rideid = :rideid", rideid = rideid)[0]
-        etime = db.execute("SELECT etime FROM requests WHERE rideid = :rideid", rideid = rideid)[0]
-        airport = db.execute("SELECT airport FROM requests WHERE rideid=:rideid", rideid = rideid)[0]
-        location = db.execute("SELECT location FROM requests WHERE rideid=:rideid", rideid = rideid)[0]
-        date = db.execute("SELECT date FROM requests WHERE rideid=:rideid", rideid = rideid)[0]
-        number = db.execute("SELECT number FROM requests WHERE rideid=:rideid", rideid = rideid)[0]
+        type = db_execute("SELECT type FROM requests WHERE rideid = :rideid", rideid = rideid)[0]
+        etime = db_execute("SELECT etime FROM requests WHERE rideid = :rideid", rideid = rideid)[0]
+        airport = db_execute("SELECT airport FROM requests WHERE rideid=:rideid", rideid = rideid)[0]
+        location = db_execute("SELECT location FROM requests WHERE rideid=:rideid", rideid = rideid)[0]
+        date = db_execute("SELECT date FROM requests WHERE rideid=:rideid", rideid = rideid)[0]
+        number = db_execute("SELECT number FROM requests WHERE rideid=:rideid", rideid = rideid)[0]
 
         fnumber = 6 - number
 
         if type == 0:
             # search for matches for departure
-            rows = db.execute("SELECT rideid FROM requests WHERE userid=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime>=:otime AND etime<=:otime OR id=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime<=:etime AND etime<=:etime ",
+            rows = db_execute("SELECT rideid FROM requests WHERE userid=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime>=:otime AND etime<=:otime OR id=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime<=:etime AND etime<=:etime ",
                               id=id, airport=airport, date=date, type=type, fnumber=fnumber, location=location)
 
         else:
             # search for matches for arrival
-            rows = db.execute("SELECT rideid FROM requests WHERE (userid=:id AND airport=:airport AND date=:date AND type = :type AND number<=:fnumber AND otime>=:otime AND otime<=:etime) OR (id=:id AND airport=:airport AND date=:date AND type = :type AND number<=:fnumber AND otime<=:otime AND etime>=:otime)",
+            rows = db_execute("SELECT rideid FROM requests WHERE (userid=:id AND airport=:airport AND date=:date AND type = :type AND number<=:fnumber AND otime>=:otime AND otime<=:etime) OR (id=:id AND airport=:airport AND date=:date AND type = :type AND number<=:fnumber AND otime<=:otime AND etime>=:otime)",
                               id=id, airport=airport, date=date, type=type,  fnumber=fnumber)
 
         if rows:
             # makes list of times
             times = []
             for i in rows:
-                times.append( db.execute("SELECT etime FROM requests WHERE rideid=:rideid", rideid = i)[0])
+                times.append( db_execute("SELECT etime FROM requests WHERE rideid=:rideid", rideid = i)[0])
 
             # makes list of time differences
             diffs = []
@@ -443,10 +458,10 @@ def closest():
 
             closest = min(zipped, key = lambda t: t[1])[0]
 
-            email = db.execute("SELECT email FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = closest)[0]
-            name = db.execute("SELECT name FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = closest)[0]
-            phone = db.execute("SELECT phone FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = closest)[0]
-            time = db.execute("SELECT etime FROM requests WHERE rideid=:rideid", rideid = closest)[0]
+            email = db_execute("SELECT email FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = closest)[0]
+            name = db_execute("SELECT name FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = closest)[0]
+            phone = db_execute("SELECT phone FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = closest)[0]
+            time = db_execute("SELECT etime FROM requests WHERE rideid=:rideid", rideid = closest)[0]
 
             message = "Here is the information for the person with the closest match:"
             # creates message for departure
@@ -460,12 +475,12 @@ def closest():
             message = "Sorry, there is nobody who matches your request"
 
 
-        return redirect("/")
+        return render_template("closested.html", message=message)
 
     # User reached route via GET (as by clicking a link or via redirect)
     else:
         id = session["user_id"]
-        rides = db.execute(
+        rides = db_execute(
             "SELECT * FROM requests WHERE userid = :id", id=id)
         return render_template("closest.html", rides=rides)
 
