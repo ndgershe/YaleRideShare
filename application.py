@@ -36,88 +36,49 @@ def home():
     return render_template("home.html")
 
 
-@app.route("/order", methods=["GET", "POST"])
-#@login_required
-def order():
-    """Makes a request"""
 
-    print("\n\nOrder was called\n\n\n")
-    # User reached route via POST (as by submitting a form via POST)
+
+@app.route("/new_order", methods=["GET", "POST"])
+@login_required
+def new_order():
+    """Request an Uber"""
+
     if request.method == "POST":
-        # This should return JSON text
-
-
-        print("\n\nGot to post\n\n\n")
-        # checks if user entered airport
-        if not request.form.get("airport"):
-            return apology("must provide airport", 400)
+        if request.form.get("type") == "0":
+            return redirect("/departure")
+        elif request.form.get("type") == "1":
+            return redirect("/arrival")
         else:
-            airport = request.form.get("airport")
+            return apology("Must select arrival or departure", 400)
 
-        if not request.form.get("type"):
-            errorJSON = {
-                "error": True
-            }
-            return jsonify(errorJSON)
-            return apology("must provide if arrival or departure", 400)
-        else:
-            if request.form.get("type") == "departure":
-                type = 0
-            else:
-                type = 1
+    if request.method == "GET":
+        return render_template("order_D_or_A.html")
 
-        # checks if user entered date
-        if not request.form.get("date"):
-            return apology("must provide date", 400)
-        else:
-            date = request.form.get("date")
 
-        # checks if user entered optimal time
-        if not request.form.get("otime"):
-            return apology("must provide optimal time", 400)
-        else:
-            otime = request.form.get("otime")
+@app.route("/departure", methods=["GET", "POST"])
+@login_required
+def departure():
+    """Display and get info from departure form"""
 
-        # checks if user entered wait time time
-        if not request.form.get("etime"):
-            return apology("must provide time", 400)
-        else:
-            etime = request.form.get("etime")
-
-        # checks if user entered number of passengers
-        if not request.form.get("number"):
-            return apology("must provide number of passengers", 400)
-        else:
-            number = request.form.get("number")
-
-        if type == 0:
-            # checks if entered location
-            if not request.form.get("location"):
-                return apology("must provide pickup location", 400)
-            else:
-                location = request.form.get("location")
+    if request.method == "POST":
 
         id = session["user_id"]
 
-        # add to requests
-        db.execute("INSERT INTO requests (userid, airport, date, otime, etime, number, type, location) VALUES (:id, :airport, :date, :otime, :etime, :number, :type, :location)",
-                       id=id, airport=airport, date=date, otime=otime, etime=etime, number=number, type=type, location=location)
+        # Define the variables from the form
+        airport = request.form.get("airport")
+        date = request.form.get("date")
+        otime = request.form.get("otime")
+        number = request.form.get("number")
+        etime = request.form.get("etime")
+        location = request.form.get("location")
 
-        # add to orders
-        db.execute("INSERT INTO requests (userid, airport, date, otime, etime, number, type) VALUES (:id, :airport, :date, :otime, :etime, :number, :type)",
-                   id=id, airport=airport, date=date, otime=otime, etime=etime, number=number, type=type)
+        # Check to make sure info was input
+        if not airport or not date or not otime or not number or not etime or not location:
+            return apology("Must complete form")
 
-        # gets ride number
-        rows = db.execute("SELECT rideid FROM requests where userid=:id AND airport=:airport AND date=:date AND otime=:otime AND etime=:etime AND number=:number AND type=:type ",
-                          id=id, airport=airport, date=date, otime=otime, etime=etime, number=number, type=type)
-        ride = rows[0]
-        ride = ride.get('rideid')
-
-        # updates history
-        db.execute("INSERT INTO history (rideid, status) VALUES (:ride, 1)",
-                   ride=ride)
-
-        # start of matching
+        rows = db.execute("INSERT INTO requests (userid, airport, date, otime, number, etime, location, type) VALUES (:userid, :airport, :date, :otime, :number, :etime, :location, 0)",
+                   userid=id, airport=airport, date=date, otime=otime, number=number, etime=etime, location=location)
+         # start of matching
 
         fnumber = 6 - number
 
@@ -125,6 +86,115 @@ def order():
             # search for matches for departure
             rows = db.execute("SELECT rideid FROM requests WHERE userid=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime>=:otime AND etime<=:otime OR id=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime<=:etime AND etime<=:etime ",
                               id=id, airport=airport, date=date, type=type, otime=otime, etime=etime, fnumber=fnumber, location=location)
+
+            if rows:
+                # makes list of times
+                times = []
+                for i in rows:
+                    i = i.get('rideid')
+                    time = db.execute("SELECT otime FROM requests WHERE rideid=:rideid", rideid = i)[0]
+                    times.append(time.get('otime'))
+
+                # makes list of time differences
+                diffs = []
+                for i in times:
+                    FMT = '%H:%M'
+                    diffs.append( abs((datetime.strptime(times[i], FMT) - datetime.strptime(otime, FMT)).total_seconds()/60))
+
+                # makes list of tupples sorted by time difference
+                zipped = []
+                zipped = list( zip(rows,diffs))
+                zipped.sort(key=lambda tup: tup[1])
+
+                # makes list of sorted rideids
+                rides = []
+                n = len(zipped)
+                for i in range(n):
+                    rides.append( zipped[i][0])
+
+                # begins message of email
+                message = "We found one or more matches:"
+
+                emails = []
+                names = []
+                phones = []
+
+                # finds information for email
+                for i in rides:
+                    i = i.get('rideid')
+                    email = db.execute("SELECT email FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0]
+                    emails.append(email.get('email'))
+                    name = db.execute("SELECT name FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0]
+                    names.append(name.get('name'))
+                    phone = db.execute("SELECT phone FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0]
+                    phones.append(phone.get('phone'))
+
+                # creates message of all info
+                n = len(rides)
+                for i in range(n):
+                    message = message + "\n" + names[i] +"'s optimum time is " + times[i]  + "\n     email: " + emails[i] + " phone #: " + phones[i] + "\n"
+
+                # gets user email
+                email = db.execute("SELECT email FROM users WHERE userid=:userid", userid = id)[0]
+                email = email.get('email')
+
+                # sends email to person who requested a ride
+                server = smtplib.SMTP("smtp.gmail.com", 587)
+                server.starttls()
+                server.login("yaleubershare@gmail.com", "najmtwbw")
+                server.sendmail("yaleubershare@gmail.com", email, message)
+
+                # gets user name and phone
+                name = db.execute("SELECT name FROM users WHERE userid=:userid", userid = id)[0]
+                name = name.ger('name')
+                phone = db.execute("SELECT phone FROM users WHERE userid=:userid", userid = id)[0]
+                phone = phone.get('phone')
+
+                # create message for matches
+                message = "Somebody matched with your uber request! Here is their information: \n" + name + "'s optimum time is " + otime  + "\n     email: " + email + " phone #: " + phone + "\n"
+
+                # sends email to all matches
+                for i in emails:
+                    server = smtplib.SMTP("smtp.gmail.com", 587)
+                    server.starttls()
+                    server.login("yaleubershare@gmail.com", "najmtwbw")
+                    server.sendmail("yaleubershare@gmail.com", i, message)
+
+        else:
+            return apology("something went wrong", 400)
+
+        return redirect("/")
+
+    if request.method == "GET":
+        return render_template("order_departure.html")
+
+
+@app.route("/arrival", methods=["GET", "POST"])
+@login_required
+def arrival():
+    """Display and get info from arrival form"""
+
+    if request.method == "POST":
+
+        id = session["user_id"]
+
+        # Define the variables from the form
+        airport = request.form.get("airport")
+        date = request.form.get("date")
+        otime = request.form.get("otime")
+        number = request.form.get("number")
+        etime = request.form.get("etime")
+
+        # Check to make sure info was input
+        if not airport or not date or not otime or not number or not etime:
+            return aplogy("Must complete form")
+
+        rows = db.execute("INSERT INTO requests (userid, airport, date, otime, number, etime, type) VALUES (:userid, :airport, :date, :otime, :number, :etime, :location, 1)",
+                   userid=id, airport=airport, date=date, otime=otime, number=number, etime=etime)
+
+         # start of matching
+
+        fnumber = 6 - number
 
         else:
             # search for matches for arrival
@@ -204,93 +274,7 @@ def order():
                     server.login("yaleubershare@gmail.com", "najmtwbw")
                     server.sendmail("yaleubershare@gmail.com", i, message)
 
-        errorJSON = {
-            "error": False
-        }
-        return jsonify(errorJSON)
-
-        # return redirect("/")
-
-    # User reached route via GET (as by clicking a link or via redirect)
-    else:
-        print("\n\nLol jk it was a GET request\n\n\n")
-        return render_template("order.html")
-
-
-@app.route("/new_order", methods=["GET", "POST"])
-@login_required
-def new_order():
-    """Request an Uber"""
-
-    if request.method == "POST":
-        if request.form.get("type") == "0":
-            return redirect("/departure")
-        elif request.form.get("type") == "1":
-            return redirect("/arrival")
         else:
-            return apology("Must select arrival or departure", 400)
-
-    if request.method == "GET":
-        return render_template("order_D_or_A.html")
-
-
-@app.route("/departure", methods=["GET", "POST"])
-@login_required
-def departure():
-    """Display and get info from departure form"""
-
-    if request.method == "POST":
-
-        id = session["user_id"]
-
-        # Define the variables from the form
-        airport = request.form.get("airport")
-        date = request.form.get("date")
-        otime = request.form.get("otime")
-        number = request.form.get("number")
-        etime = request.form.get("etime")
-        location = request.form.get("location")
-
-        # Check to make sure info was input
-        if not airport or not date or not otime or not number or not etime or not location:
-            return aplogy("Must complete form")
-
-        rows = db.execute("INSERT INTO requests (userid, airport, date, otime, number, etime, location, type) VALUES (:userid, :airport, :date, :otime, :number, :etime, :location, 0)",
-                   userid=id, airport=airport, date=date, otime=otime, number=number, etime=etime, location=location)
-
-        if not rows:
-            return apology("something went wrong", 400)
-
-        return redirect("/")
-
-    if request.method == "GET":
-        return render_template("order_departure.html")
-
-
-@app.route("/arrival", methods=["GET", "POST"])
-@login_required
-def arrival():
-    """Display and get info from arrival form"""
-
-    if request.method == "POST":
-
-        id = session["user_id"]
-
-        # Define the variables from the form
-        airport = request.form.get("airport")
-        date = request.form.get("date")
-        otime = request.form.get("otime")
-        number = request.form.get("number")
-        etime = request.form.get("etime")
-
-        # Check to make sure info was input
-        if not airport or not date or not otime or not number or not etime:
-            return aplogy("Must complete form")
-
-        rows = db.execute("INSERT INTO requests (userid, airport, date, otime, number, etime, type) VALUES (:userid, :airport, :date, :otime, :number, :etime, :location, 1)",
-                   userid=id, airport=airport, date=date, otime=otime, number=number, etime=etime)
-
-        if not rows:
             return apology("something went wrong", 400)
 
         return redirect("/")
