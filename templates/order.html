@@ -5,9 +5,6 @@
 {% endblock %}
 
 {% block main %}
-    <head>
-        <script src="order.js"></script>
-    </head>
     <body>
         <form action="/order" id="registration" method="post">
         <b>Airport</b>
@@ -43,6 +40,7 @@
         </div>
 
 
+
         <form id="form-shower">
             <select id="myselect">
                 <option value="" disabled selected>--Departure or Arrival--</option>
@@ -56,7 +54,7 @@
         <div class="form-group">
             <input autocomplete="off" autofocus class="form-control" name="etime" id="arrivaletime" type="time" placeholder="Latest time of pickup"/>
         </div>
-        <button class="btn btn-primary" onclick="arrival()">Order</button>
+        <button class="btn btn-primary" type="submit" id="arrivalbutton">Order</button>
         </form>
 
         <form name="departure" id="departure" style="display:none">
@@ -65,13 +63,14 @@
                 <input autocomplete="off" autofocus class="form-control" name="etime" id="departureetime" type="time" placeholder="Earliest time of pickup"/>
             </div>
             <div class="form-group">
-                <select name = "location">
+                <select name = "location" id="location">
                     <option value="" disabled selected>--Enter pickup location--</option>
                     <option value="phelps">Phelps Gate</option>
                     <option value="science">Science Hill</option>
                 </select>
             </div>
-            <button class="btn btn-primary" onclick="departure()">Order</button>
+            <button class="btn btn-primary" type="submit" id="departurebutton">Order</button>
         </form>
+        <script type="text/javascript" src="/static/order.js"></script>
     </body>
 {% endblock %}
