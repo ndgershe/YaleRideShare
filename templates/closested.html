@@ -6,6 +6,16 @@
 
 {% block main %}
    <p>
-        {{message}}
+        {# {% for c in message %}
+            {% if c == "\n" %}
+                {{ c }}
+            {% endif %}
+            {% if c != "\n" %}
+                <br>
+            {% endif %}
+        {% endfor %} #}
+
+        {{ message }}
+
    </p>
 {% endblock %}

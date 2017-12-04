@@ -6,7 +6,6 @@ from werkzeug.exceptions import default_exceptions
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
 import smtplib
-from datetime import datetime
 
 from helpers import apology, login_required
 # Configure application
@@ -64,104 +63,126 @@ def departure():
 
         id = session["user_id"]
 
-        # Define the variables from the form
-        airport = request.form.get("airport")
-        date = request.form.get("date")
-        otime = request.form.get("otime")
-        number = request.form.get("number")
-        etime = request.form.get("etime")
-        location = request.form.get("location")
+        # Define the type
+        type = 0
 
-        # Check to make sure info was input
-        if not airport or not date or not otime or not number or not etime or not location:
-            return apology("Must complete form")
+        # checks if user entered date
+        if not request.form.get("date"):
+            return apology("must provide date", 400)
+        else:
+            date = request.form.get("date")
 
-        rows = db.execute("INSERT INTO requests (userid, airport, date, otime, number, etime, location, type) VALUES (:userid, :airport, :date, :otime, :number, :etime, :location, 0)",
-                   userid=id, airport=airport, date=date, otime=otime, number=number, etime=etime, location=location)
+        # checks if user entered optimal time
+        if not request.form.get("otime"):
+            return apology("must provide optimal time", 400)
+        else:
+            otime = request.form.get("otime")
+
+        # checks if user entered wait time time
+        if not request.form.get("etime"):
+            return apology("must provide time", 400)
+        else:
+            etime = request.form.get("etime")
+
+        # checks if user entered number of passengers
+        if not request.form.get("number"):
+            return apology("must provide number of passengers", 400)
+        else:
+            number = int(request.form.get("number"))
+
+        # checks if user entered airport
+        if not request.form.get("airport"):
+            return apology("must provide airport", 400)
+        else:
+            airport = request.form.get("airport")
+
+        # checks if entered location
+        if not request.form.get("location"):
+            return apology("must provide pickup location", 400)
+        else:
+            location = request.form.get("location")
+
+
+        rows = db.execute("INSERT INTO requests (userid, airport, date, otime, number, etime, location, type) VALUES (:userid, :airport, :date, :otime, :number, :etime, :location, :type)",
+                   userid=id, airport=airport, date=date, otime=otime, number=number, etime=etime, location=location, type=type)
          # start of matching
 
         fnumber = 6 - number
 
-        if type == 0:
-            # search for matches for departure
-            rows = db.execute("SELECT rideid FROM requests WHERE userid=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime>=:otime AND etime<=:otime OR id=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime<=:etime AND etime<=:etime ",
-                              id=id, airport=airport, date=date, type=type, otime=otime, etime=etime, fnumber=fnumber, location=location)
+        # search for matches for departure
+        rows = db.execute("SELECT rideid FROM requests WHERE userid!=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime>=:otime AND etime<=:otime OR userid!=:id AND airport=:airport AND location=:location AND date=:date AND type = :type AND number<=:fnumber AND otime<=:etime AND etime<=:etime ",
+                          id=id, airport=airport, date=date, type=type, otime=otime, etime=etime, fnumber=fnumber, location=location)
 
-            if rows:
-                # makes list of times
-                times = []
-                for i in rows:
-                    i = i.get('rideid')
-                    time = db.execute("SELECT otime FROM requests WHERE rideid=:rideid", rideid = i)[0]
-                    times.append(time.get('otime'))
+        if rows:
+            # makes list of times
+            times = []
+            for i in rows:
+                i = i.get('rideid')
+                time = db.execute("SELECT otime FROM requests WHERE rideid=:rideid", rideid = i)[0]
+                times.append(time.get('otime'))
 
-                # makes list of time differences
-                diffs = []
-                for i in times:
-                    FMT = '%H:%M'
-                    diffs.append( abs((datetime.strptime(times[i], FMT) - datetime.strptime(otime, FMT)).total_seconds()/60))
+            # makes list of time differences
+            diffs = []
+            n = len(times)
+            for i in range(n):
+                FMT = '%H:%M'
+                diffs.append( abs((datetime.strptime(times[i], FMT) - datetime.strptime(otime, FMT)).total_seconds()/60))
 
-                # makes list of tupples sorted by time difference
-                zipped = []
-                zipped = list( zip(rows,diffs))
-                zipped.sort(key=lambda tup: tup[1])
+            # makes list of tupples sorted by time difference
+            zipped = []
+            zipped = list( zip(rows,diffs))
+            zipped.sort(key=lambda tup: tup[1])
 
-                # makes list of sorted rideids
-                rides = []
-                n = len(zipped)
-                for i in range(n):
-                    rides.append( zipped[i][0])
+            # makes list of sorted rideids
+            rides = []
+            n = len(zipped)
+            for i in range(n):
+                rides.append( zipped[i][0])
 
-                # begins message of email
-                message = "We found one or more matches:"
+            # begins message of email
+            message = "We found one or more matches:"
 
-                emails = []
-                names = []
-                phones = []
+            emails = []
+            names = []
+            phones = []
 
-                # finds information for email
-                for i in rides:
-                    i = i.get('rideid')
-                    email = db.execute("SELECT email FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0]
-                    emails.append(email.get('email'))
-                    name = db.execute("SELECT name FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0]
-                    names.append(name.get('name'))
-                    phone = db.execute("SELECT phone FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0]
-                    phones.append(phone.get('phone'))
+            # finds information for email
+            for i in rides:
+                i = i.get('rideid')
+                email = db.execute("SELECT email FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0]
+                emails.append(email.get('email'))
+                name = db.execute("SELECT name FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0]
+                names.append(name.get('name'))
+                phone = db.execute("SELECT phone FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0]
+                phones.append(phone.get('phone'))
 
-                # creates message of all info
-                n = len(rides)
-                for i in range(n):
-                    message = message + "\n" + names[i] +"'s optimum time is " + times[i]  + "\n     email: " + emails[i] + " phone #: " + phones[i] + "\n"
+            # creates message of all info
+            n = len(rides)
+            for i in range(n):
+                message = message + "\n" + names[i] +"\'s optimum time is " + times[i]  + "\n     email: " + emails[i] + " phone #: " + phones[i] + "\n"
 
-                # gets user email
-                email = db.execute("SELECT email FROM users WHERE userid=:userid", userid = id)[0]
-                email = email.get('email')
+            # gets user email
+            email = db.execute("SELECT email FROM users WHERE userid=:userid", userid = id)[0]
+            email = email.get('email')
 
-                # sends email to person who requested a ride
-                server = smtplib.SMTP("smtp.gmail.com", 587)
-                server.starttls()
-                server.login("yaleubershare@gmail.com", "najmtwbw")
-                server.sendmail("yaleubershare@gmail.com", email, message)
+            # sends email to person who requested a ride
+            server = smtplib.SMTP("smtp.gmail.com", 587)
+            server.starttls()
+            server.login("yaleubershare@gmail.com", "najmtwbw")
+            server.sendmail("yaleubershare@gmail.com", email, message)
 
-                # gets user name and phone
-                name = db.execute("SELECT name FROM users WHERE userid=:userid", userid = id)[0]
-                name = name.ger('name')
-                phone = db.execute("SELECT phone FROM users WHERE userid=:userid", userid = id)[0]
-                phone = phone.get('phone')
+            # gets user name and phone
+            name = db.execute("SELECT name FROM users WHERE userid=:userid", userid = id)[0]
+            name = name.get('name')
+            phone = db.execute("SELECT phone FROM users WHERE userid=:userid", userid = id)[0]
+            phone = phone.get('phone')
 
-                # create message for matches
-                message = "Somebody matched with your uber request! Here is their information: \n" + name + "'s optimum time is " + otime  + "\n     email: " + email + " phone #: " + phone + "\n"
 
-                # sends email to all matches
-                for i in emails:
-                    server = smtplib.SMTP("smtp.gmail.com", 587)
-                    server.starttls()
-                    server.login("yaleubershare@gmail.com", "najmtwbw")
-                    server.sendmail("yaleubershare@gmail.com", i, message)
+           # sends email to all matches
+            for i in emails:
+                server.sendmail("yaleubershare@gmail.com", i, message)
+                print(f"email was supposedly sent to {i}")
 
-        else:
-            return apology("something went wrong", 400)
 
         return redirect("/")
 
@@ -178,104 +199,131 @@ def arrival():
 
         id = session["user_id"]
 
-        # Define the variables from the form
-        airport = request.form.get("airport")
-        date = request.form.get("date")
-        otime = request.form.get("otime")
-        number = request.form.get("number")
-        etime = request.form.get("etime")
+        # Define the type
+        type = 1
 
         # Check to make sure info was input
-        if not airport or not date or not otime or not number or not etime:
-            return aplogy("Must complete form")
+        # checks if user entered date
+        if not request.form.get("date"):
+            return apology("must provide date", 400)
+        else:
+            date = request.form.get("date")
 
-        rows = db.execute("INSERT INTO requests (userid, airport, date, otime, number, etime, type) VALUES (:userid, :airport, :date, :otime, :number, :etime, :location, 1)",
-                   userid=id, airport=airport, date=date, otime=otime, number=number, etime=etime)
+        # checks if user entered optimal time
+        if not request.form.get("otime"):
+            return apology("must provide optimal time", 400)
+        else:
+            otime = request.form.get("otime")
 
-         # start of matching
+        # checks if user entered wait time time
+        if not request.form.get("etime"):
+            return apology("must provide time", 400)
+        else:
+            etime = request.form.get("etime")
+
+        # checks if user entered airport
+        if not request.form.get("airport"):
+            return apology("must provide airport", 400)
+        else:
+            airport = request.form.get("airport")
+
+        # checks if user entered number of passengers
+        if not request.form.get("number"):
+            return apology("must provide number of passengers", 400)
+        else:
+            number = int(request.form.get("number"))
+
+
+
+        rows = db.execute("INSERT INTO requests (userid, airport, date, otime, number, etime, type) VALUES (:userid, :airport, :date, :otime, :number, :etime, :type)",
+                   userid=id, airport=airport, date=date, otime=otime, number=number, etime=etime, type=type )
+
+
+        # start of matching
 
         fnumber = 6 - number
 
-        else:
-            # search for matches for arrival
-            rows = db.execute("SELECT rideid FROM requests WHERE (userid=:id AND airport=:airport AND date=:date AND type = :type AND number<=:fnumber AND otime>=:otime AND otime<=:etime) OR (id=:id AND airport=:airport AND date=:date AND type = :type AND number<=:fnumber AND otime<=:otime AND etime>=:otime)",
-                              id=id, airport=airport, date=date, type=type, otime=otime, etime=etime, fnumber=fnumber)
+        # search for matches for arrival
+        rows = db.execute("SELECT rideid FROM requests WHERE (userid!=:id AND airport=:airport AND date=:date AND type = :type AND number<=:fnumber AND otime>=:otime AND otime<=:etime) OR (userid!=:id AND airport=:airport AND date=:date AND type = :type AND number<=:fnumber AND otime<=:otime AND etime>=:otime)",
+                          id=id, airport=airport, date=date, type=type, otime=otime, etime=etime, fnumber=fnumber)
 
-            if rows:
-                # makes list of times
-                times = []
-                for i in rows:
-                    i = i.get('rideid')
-                    time = db.execute("SELECT otime FROM requests WHERE rideid=:rideid", rideid = i)[0]
-                    times.append(time.get('otime'))
+        print("\n\nHI\n\n")
+        print(rows)
+        print()
+        print()
 
-                # makes list of time differences
-                diffs = []
-                for i in times:
-                    FMT = '%H:%M'
-                    diffs.append( abs((datetime.strptime(times[i], FMT) - datetime.strptime(otime, FMT)).total_seconds()/60))
+        if rows:
+            # makes list of times
+            times = []
+            for i in rows:
+                i = i.get('rideid')
+                time = db.execute("SELECT otime FROM requests WHERE rideid=:rideid", rideid = i)[0]
+                times.append(time.get('otime'))
 
-                # makes list of tupples sorted by time difference
-                zipped = []
-                zipped = list( zip(rows,diffs))
-                zipped.sort(key=lambda tup: tup[1])
+            # makes list of time differences
+            diffs = []
+            n = len(times)
+            for i in range(n):
+                FMT = '%H:%M'
+                diffs.append( abs((datetime.strptime(times[i], FMT) - datetime.strptime(otime, FMT)).total_seconds()/60))
 
-                # makes list of sorted rideids
-                rides = []
-                n = len(zipped)
-                for i in range(n):
-                    rides.append( zipped[i][0])
+            # makes list of tupples sorted by time difference
+            zipped = []
+            zipped = list( zip(rows,diffs))
+            zipped.sort(key=lambda tup: tup[1])
 
-                # begins message of email
-                message = "We found one or more matches:"
+            # makes list of sorted rideids
+            rides = []
+            n = len(zipped)
+            for i in range(n):
+                rides.append( zipped[i][0])
 
-                emails = []
-                names = []
-                phones = []
+            # begins message of email
+            message = "We found one or more matches:"
 
-                # finds information for email
-                for i in rides:
-                    i = i.get('rideid')
-                    email = db.execute("SELECT email FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0]
-                    emails.append(email.get('email'))
-                    name = db.execute("SELECT name FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0]
-                    names.append(name.get('name'))
-                    phone = db.execute("SELECT phone FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0]
-                    phones.append(phone.get('phone'))
+            emails = []
+            names = []
+            phones = []
 
-                # creates message of all info
-                n = len(rides)
-                for i in range(n):
-                    message = message + "\n" + names[i] +"'s optimum time is " + times[i]  + "\n     email: " + emails[i] + " phone #: " + phones[i] + "\n"
+            # finds information for email
+            for i in rides:
+                i = i.get('rideid')
+                email = db.execute("SELECT email FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0]
+                emails.append(email.get('email'))
+                name = db.execute("SELECT name FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0]
+                names.append(name.get('name'))
+                phone = db.execute("SELECT phone FROM requests JOIN users ON requests.userid = users.userid WHERE rideid=:rideid", rideid = i)[0]
+                phones.append(phone.get('phone'))
 
-                # gets user email
-                email = db.execute("SELECT email FROM users WHERE userid=:userid", userid = id)[0]
-                email = email.get('email')
+            # creates message of all info
+            n = len(rides)
+            for i in range(n):
+                message = message + "\n" + names[i] +"\'s optimum time is " + times[i]  + "\n     email: " + emails[i] + " phone #: " + phones[i] + "\n"
 
-                # sends email to person who requested a ride
-                server = smtplib.SMTP("smtp.gmail.com", 587)
-                server.starttls()
-                server.login("yaleubershare@gmail.com", "najmtwbw")
-                server.sendmail("yaleubershare@gmail.com", email, message)
+            # gets user email
+            email = db.execute("SELECT email FROM users WHERE userid=:userid", userid = id)[0]
+            email = email.get('email')
 
-                # gets user name and phone
-                name = db.execute("SELECT name FROM users WHERE userid=:userid", userid = id)[0]
-                name = name.ger('name')
-                phone = db.execute("SELECT phone FROM users WHERE userid=:userid", userid = id)[0]
-                phone = phone.get('phone')
+            # sends email to person who requested a ride
+            server = smtplib.SMTP("smtp.gmail.com", 587)
+            server.starttls()
+            server.login("yaleubershare@gmail.com", "najmtwbw")
+            server.sendmail("yaleubershare@gmail.com", email, message)
 
-                # create message for matches
-                message = "Somebody matched with your uber request! Here is their information: \n" + name + "'s optimum time is " + otime  + "\n     email: " + email + " phone #: " + phone + "\n"
+            # gets user name and phone
+            name = db.execute("SELECT name FROM users WHERE userid=:userid", userid = id)[0]
+            name = name.get('name')
+            phone = db.execute("SELECT phone FROM users WHERE userid=:userid", userid = id)[0]
+            phone = phone.get('phone')
 
-                # sends email to all matches
-                for i in emails:
-                    server = smtplib.SMTP("smtp.gmail.com", 587)
-                    server.starttls()
-                    server.login("yaleubershare@gmail.com", "najmtwbw")
-                    server.sendmail("yaleubershare@gmail.com", i, message)
+            # create message for matches
+            message = "Somebody matched with your uber request! Here is their information: \n" + name + "'s optimum time is " + otime  + "\n     email: " + email + " phone #: " + phone + "\n"
 
-        else:
-            return apology("something went wrong", 400)
+            # sends email to all matches
+            for i in emails:
+                server.sendmail("yaleubershare@gmail.com", i, message)
+                print(f"email was supposedly sent to {i}")
+
 
         return redirect("/")
 
@@ -402,12 +450,10 @@ def register():
             return apology("Must enter valid phone number", 400)
 
         if not dash:
-            '-'.join([phone[:4], phone[4:6], phone[6:]])
+            phone = '-'.join([phone[:3], phone[3:6], phone[6:]])
 
         # hashes password
         hash = generate_password_hash(request.form.get("password"))
-
-
 
         # inserts new user in data base and checks username
         rows = db.execute("INSERT INTO users ( username, password, name, surname, email, phone ) VALUES( :username, :hash, :name, :surname, :email, :phone )",
@@ -422,7 +468,7 @@ def register():
         print(rows)
 
         # Remember which user has logged in
-        session["user_id"] = rows[0]
+        session["user_id"] = rows[0]["userid"]
 
         return redirect("/")
 
@@ -439,14 +485,15 @@ def cancel():
     # User reached route via POST (as by submitting a form via POST)
     if request.method == "POST":
         rideid = request.form.get("rideid")
-        db.execute("DELETE FROM requests WHERE rideid = rideid")
+        db.execute("DELETE FROM requests WHERE rideid = :rideid", rideid = rideid)
         return redirect("/")
 
     # User reached route via GET (as by clicking a link or via redirect)
     else:
         id = session["user_id"]
+        print(id)
         rides = db.execute(
-            "SELECT * FROM requests WHERE userid = :id", id = id)
+            "SELECT * FROM requests WHERE userid = :id", id=id)
         return render_template("cancel.html", rides=rides)
 
 
@@ -482,13 +529,9 @@ def settings():
             if newpass != verification:
                 return apology("new passwords must match", 400)
 
-
             # update password
             newpass = generate_password_hash(newpass)
             db.execute("UPDATE users SET password=:newpass WHERE userid = :id", newpass = newpass, id = id)
-
-
-
 
         return redirect("/")
 
@@ -507,7 +550,6 @@ def closest():
         id = session["user_id"]
 
         rideid = request.form.get("rideid")
-
 
         type = dict(db.execute("SELECT type FROM requests WHERE rideid = rideid")[0])
         etime = dict(db.execute("SELECT etime FROM requests WHERE rideid = rideid")[0])
@@ -559,20 +601,25 @@ def closest():
             zipped = list(zip(rows,diffs))
 
             closest = min(zipped, key = lambda t: t[1])[0]
-            print(closest)
+            closest = closest.get('rideid')
 
             email = db.execute("SELECT email FROM requests JOIN users ON requests.userid = users.userid WHERE rideid = :closest", closest = closest)[0]
             name = db.execute("SELECT name FROM requests JOIN users ON requests.userid = users.userid WHERE rideid = :closest", closest = closest)[0]
             phone = db.execute("SELECT phone FROM requests JOIN users ON requests.userid = users.userid WHERE rideid = :closest", closest = closest)[0]
             time = db.execute("SELECT etime FROM requests WHERE rideid = :closest", closest = closest)[0]
 
+            email =  email.get('email')
+            name =  name.get('name')
+            phone =  phone.get('phone')
+            time =  time.get('etime')
+
             message = "Here is the information for the person with the closest match:"
             # creates message for departure
             if type == 0:
-                message = message + "\n" + name +"'s earliest time is " + time  + "\n     email: " + email + " phone #: " + phone + "\n"
+                message = message + "<br>" + name +"\'s earliest time is " + time  + "<b>email: " + email + "<br>phone #: " + phone + "<br>"
             # creates message for arrival
             else:
-                message = message + "\n" + name +"'s latestt time is " + time  + "\n     email: " + email + " phone #: " + phone + "\n"
+                message = message + "<br>" + name +"\'s latestt time is " + time  + "<br>email: " + email + "<br>phone #: " + phone + "<br>"
 
         else:
             message = "Sorry, there is nobody who matches your request"
