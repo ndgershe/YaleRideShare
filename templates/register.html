@@ -5,6 +5,10 @@
 {% endblock %}
 
 {% block main %}
+     <p>
+         ***By registering you are agreeing to have your phone and email sent to other users***
+     </p>
+
     <form action="/register" method="post">
         <fieldset>
             <legend>Login Credentials</legend>
@@ -30,7 +34,7 @@
                 <input class="form-control" name="email" placeholder="Email Address" type="email"/>
             </div>
             <div class="form-group">
-                <input class="form-control" name="phone" placeholder="Phone Number" type="number"/>
+                <input class="form-control" name="phone" placeholder="Phone Number" type="text"/>
             </div>
         </fieldset>
         <button class="btn btn-primary" type="submit">Register</button>

@@ -5,6 +5,10 @@
 {% endblock %}
 
 {% block main %}
+    <p>
+        <b>Change of plans?</b></br>
+        Cancel your match request here:
+    </p>
     <form action="/cancel" method="post">
         <select name = "rideid">
             <option value="" disabled selected>--Select Ride to Cancel--</option>

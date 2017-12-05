@@ -5,11 +5,14 @@
 {% endblock %}
 
 {% block main %}
+    <p>
+        <b>Here you can request for your ride to be matched.</b><br />
+        First we need to know what type of ride it is:
+    </p>
     <form action="/new_order" method="post">
-        <b>Departure or Arrival</b>
         <div class="form-group">
             <select name = "type">
-                <option value="" disabled selected>--Select an option--</option>
+                <option value="" disabled selected>--Departure or Arrival--</option>
                 <option value="0">Departure</option>
                 <option value="1">Arrival</option>
             </select>

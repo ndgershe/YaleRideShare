@@ -1,9 +1,15 @@
 {% extends "layout.html" %}
 
+{% block title %}
+    History
+{% endblock %}
 
 {% block main %}
+    <p>
+        <b>Here are all of your rides!</b>
+    </p>
     <table class = "table table-striped">
-    <thead><tr><th>Airport</th><th>Type</th><th>Date</th></tr></thead>
+    <thead><tr><th>Airport</th><th>Type</th><th>Date</th><th>Status</th></tr></thead>
     <tbody>
     {% for ride in rides %}
         {% if ride.type == 0 %}
@@ -11,6 +17,7 @@
                 <td>{{ ride.airport }}</td>
                 <td>Departure</td>
                 <td>{{ ride.date }}</td>
+                <td>{{ ride.status }}</td>
             </tr>
         {% endif %}
         {% if ride.type == 1 %}
@@ -18,11 +25,17 @@
                 <td>{{ ride.airport }}</td>
                 <td>Arrival</td>
                 <td>{{ ride.date }}</td>
+                <td>{{ ride.status }}</td>
             </tr>
         {% endif %}
     {% endfor %}
     </tbody>
     </table>
 
+    <form action="/history" method="post">
+      <div>
+        <button type="submit">Clear History</button>
+      </div>
+    </form>
 
 {% endblock %}

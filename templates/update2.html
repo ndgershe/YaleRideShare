@@ -1,11 +1,32 @@
 {% extends "layout.html" %}
 
 {% block title %}
-    Order
+    Update
 {% endblock %}
 
 {% block main %}
-    <form action="/departure" method="post">
+    <p>
+       <b>Here is your current ride information:</b><br />
+       Airport: {{ airport }}<br />
+       Date: {{ date }}<br />
+       Optimal time: {{ otime }}<br />
+       {% if type == "Departure" %}
+            Earliest time: {{ etime }}<br />
+        {% else %}
+            Latest time: {{ etime }}<br />
+        {% endif %}
+       Number of people: {{ number }}<br />
+       Type: {{ type }}<br />
+   </p>
+     <form action="/update2" method="post">
+         <b>Type</b>
+         <div class="form-group">
+            <select name = "type">
+                <option value="" disabled selected>--Departure or Arrival--</option>
+                <option value="0">Departure</option>
+                <option value="1">Arrival</option>
+            </select>
+        </div>
         <b>Airport</b>
         <div class="form-group">
             <select name = "airport">
@@ -37,18 +58,17 @@
                 <option value="6">6</option>
             </select>
         </div>
+        {% if type == "Departure" %}
         <b>Earliest Time of Pickup</b>
-        <div class="form-group">
-            <input autocomplete="off" autofocus class="form-control" name="etime" type="time" placeholder="Earliest time of pickup"/>
-        </div>
-        <div class="form-group">
-            <select name = "location">
-                <option value="" disabled selected>--Enter pickup location--</option>
-                <option value="any">Anywhere on Campus</option>
-                <option value="phelps">Phelps Gate</option>
-                <option value="science">Science Hill</option>
-            </select>
-        </div>
-        <button class="btn btn-primary" type="submit">Order</button>
+            <div class="form-group">
+                <input autocomplete="off" autofocus class="form-control" name="etime" type="time" placeholder="Earliest time of pickup"/>
+            </div>
+        {% else %}
+            <b>Latest Time of Pickup</b>
+            <div class="form-group">
+                <input autocomplete="off" autofocus class="form-control" name="etime" type="time" placeholder="Latest time of pickup"/>
+            </div>
+        {% endif %}
+        <button class="btn btn-primary" type="submit">Update and check for matches</button>
     </form>
 {% endblock %}

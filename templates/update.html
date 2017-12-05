@@ -1,17 +1,17 @@
 {% extends "layout.html" %}
 
 {% block title %}
-    Closest
+    Update
 {% endblock %}
 
 {% block main %}
     <p>
-        <b>No matches?</b><br />
-        Here you can find who has the closest time to you in case you want to lengthen your wait time
+        <b>Want to change something about your ride?</b></br>
+        Choose which to update
     </p>
-    <form action="/closest" method="post">
+    <form action="/update" method="post">
         <select name = "rideid">
-            <option value="" disabled selected>--Select ride to find closest time to--</option>
+            <option value="" disabled selected>--Select Ride to Update--</option>
             {% for ride in rides %}
                 {% if ride.type == 0 %}
                     <option value="{{ ride.rideid }}"> Departure from {{ ride.airport }} on {{ ride.date }}</option>
@@ -21,6 +21,6 @@
                 {% endif %}
             {% endfor %}
         </select>
-        <button class="btn btn-primary" type="submit">Find</button>
+        <button class="btn btn-primary" type="submit">Update</button>
     </form>
 {% endblock %}

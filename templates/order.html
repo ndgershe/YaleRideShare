@@ -5,30 +5,29 @@
 {% endblock %}
 
 {% block main %}
-    <body>
-        <form action="/order" id="registration" method="post">
+   <form action="/order" method="post">
         <b>Airport</b>
         <div class="form-group">
-            <select name = "airport" id="airport">
+            <select name = "airport">
                 <option value="" disabled selected>--Select your airport--</option>
-                <option value="hvn">Tweed New Haven Airport (HVN)</option>
-                <option value="bdl">Bradley International Airport (BDL)</option>
-                <option value="lga">LaGuardia Airport (LGA)</option>
-                <option value="jfk">JFK Airport (JFK)</option>
-                <option value="ewr">Newark Airport (EWR)</option>
-                <option value="hpn">Westchester County Airport (HPN)</option>
+                <option value="HVN">Tweed New Haven Airport (HVN)</option>
+                <option value="BDL">Bradley International Airport (BDL)</option>
+                <option value="LGA">LaGuardia Airport (LGA)</option>
+                <option value="JFK">JFK Airport (JFK)</option>
+                <option value="EWR">Newark Airport (EWR)</option>
+                <option value="HPN">Westchester County Airport (HPN)</option>
             </select>
         </div>
         <b>Date</b>
         <div class="form-group">
-            <input autocomplete="off" autofocus class="form-control" name="date" id="date" type="date" placeholder="Date"/>
+            <input autocomplete="off" autofocus class="form-control" name="date" type="date" placeholder="Date"/>
         </div>
         <b>Optimal Pickup Time</b>
         <div class="form-group">
-            <input autocomplete="off" autofocus class="form-control" name="otime" id="otime" type="time" placeholder="Optimal time of pickup"/>
+            <input autocomplete="off" autofocus class="form-control" name="otime" type="time" placeholder="Optimal time of pickup"/>
         </div>
         <div class="form-group">
-            <select name = "number" id="number">
+            <select name = "number">
                 <option value="" disabled selected>--Number of passengers in your party--</option>
                 <option value="1">1</option>
                 <option value="2">2</option>
@@ -38,39 +37,17 @@
                 <option value="6">6</option>
             </select>
         </div>
-
-
-
-        <form id="form-shower">
-            <select id="myselect">
-                <option value="" disabled selected>--Departure or Arrival--</option>
-                <option value="arrival">Arrival</option>
-                <option value="departure">Departure</option>
-            </select>
-        </form>
-
-        <form name="arrival" id="arrival" style="display:none">
-        <b>Latest Time of Pickup</b>
-        <div class="form-group">
-            <input autocomplete="off" autofocus class="form-control" name="etime" id="arrivaletime" type="time" placeholder="Latest time of pickup"/>
-        </div>
-        <button class="btn btn-primary" type="submit" id="arrivalbutton">Order</button>
-        </form>
-
-        <form name="departure" id="departure" style="display:none">
+        {% if type == "0" %}
             <b>Earliest Time of Pickup</b>
             <div class="form-group">
-                <input autocomplete="off" autofocus class="form-control" name="etime" id="departureetime" type="time" placeholder="Earliest time of pickup"/>
+                <input autocomplete="off" autofocus class="form-control" name="etime" type="time" placeholder="Earliest time of pickup"/>
             </div>
+        {% else %}
+            <b>Latest Time of Pickup</b>
             <div class="form-group">
-                <select name = "location" id="location">
-                    <option value="" disabled selected>--Enter pickup location--</option>
-                    <option value="phelps">Phelps Gate</option>
-                    <option value="science">Science Hill</option>
-                </select>
+                <input autocomplete="off" autofocus class="form-control" name="etime" type="time" placeholder="Latest time of pickup"/>
             </div>
-            <button class="btn btn-primary" type="submit" id="departurebutton">Order</button>
-        </form>
-        <script type="text/javascript" src="/static/order.js"></script>
-    </body>
+        {% endif %}
+        <button class="btn btn-primary" type="submit">Request</button>
+    </form>
 {% endblock %}

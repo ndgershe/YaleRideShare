@@ -1,0 +1,15 @@
+{% extends "layout.html" %}
+
+{% block title %}
+    Order
+{% endblock %}
+
+{% block main %}
+    <body>
+        {% if matched == True %}
+            A match has been made for you. Check your email!
+        {% else %}
+            There are no matches at this time, but you will be notified via email when a match is made!
+        {% endif %}
+    </body>
+{% endblock %}
