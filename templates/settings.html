@@ -13,6 +13,7 @@
        Email: {{ email }}<br />
        Phone Number: {{ phone }}<br />
    </p>
+   <small>**Leave the fields you don't want to change blank**</small></br>
     <form action="/settings" method="post">
         <fieldset>
             <legend>Change Information</legend>
@@ -31,7 +32,17 @@
             <div class="form-group">
                 <input class="form-control" name="phone" placeholder="Phone Number" type="text"/>
             </div>
+            <legend>Change Password</legend>
+            <div class="form-group">
+                <input class="form-control" name="oldpass" placeholder="Old Password" type="password"/>
+            </div>
+            <div class="form-group">
+                <input class="form-control" name="newpass" placeholder="New Password" type="password"/>
+            </div>
+            <div class="form-group">
+                <input class="form-control" name="verification" placeholder="Verify New Password" type="password"/>
+            </div>
         </fieldset>
     <button class="btn btn-primary" type="submit">Change</button>
-    </form>
+
 {% endblock %}

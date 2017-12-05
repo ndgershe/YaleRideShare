@@ -354,7 +354,7 @@ def update2():
 @app.route("/settings", methods=["GET", "POST"])
 @login_required
 def settings():
-    """Allows user to change password"""
+    """Allows user to change information"""
 
     # User reached route via POST (as by submitting a form via POST)
     if request.method == "POST":
@@ -380,8 +380,37 @@ def settings():
             db.execute("UPDATE users SET email=:email WHERE userid = :id", email = request.form.get("email"), id = id)
 
         if request.form.get("phone"):
-            phone = phone(request.form.get("phone"))
+            # What is this line doing? Did you mean 386?
+            # phone = phone(request.form.get("phone"))
+
+            phone = request.form.get("phone")
             db.execute("UPDATE users SET phone=:phone WHERE userid = :id", phone = phone, id = id)
+
+        # checks if user entered passwords
+        if request.form.get("oldpass"):
+
+            if not request.form.get("newpass"):
+                return apology("must enter new password", 400)
+            elif not request.form.get("verification"):
+                return apology("must verify password", 400)
+            else:
+                # stores passwords
+                oldpass = request.form.get("oldpass")
+                newpass = request.form.get("newpass")
+                verification = request.form.get("verification")
+
+                row = db.execute("SELECT password FROM users WHERE userid = :id", id=id)
+
+                # ensure user inputs valid information
+                if not check_password_hash(row[0]["password"], oldpass):
+                    return apology("old password is incorrect", 400)
+
+                if newpass != verification:
+                    return apology("new passwords must match", 400)
+
+                # update password
+                newpass = generate_password_hash(newpass)
+                db.execute("UPDATE users SET password=:newpass WHERE userid = :id", newpass = newpass, id = id)
 
         return redirect("/")
     # User reached route via GET (as by clicking a link or via redirect)
@@ -592,7 +621,7 @@ def orderer(type):
     # insert into history
     db.execute("INSERT INTO history (rideid, userid) VALUES (:rideid, :userid)", rideid=rows, userid = id)
 
-    return(match(rows))
+    return match(rows)
 
 
 def match(rideid):

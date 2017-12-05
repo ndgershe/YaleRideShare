@@ -59,12 +59,14 @@
             </select>
         </div>
         {% if type == "Departure" %}
-        <b>Earliest Time of Pickup</b>
+        <b>Earliest Time of Pickup</b></br>
+            <small>In format: Hour:Minute:PM/AM</small>
             <div class="form-group">
                 <input autocomplete="off" autofocus class="form-control" name="etime" type="time" placeholder="Earliest time of pickup"/>
             </div>
         {% else %}
-            <b>Latest Time of Pickup</b>
+            <b>Latest Time of Pickup</b></br>
+            <small>In format: Hour:Minute:PM/AM</small>
             <div class="form-group">
                 <input autocomplete="off" autofocus class="form-control" name="etime" type="time" placeholder="Latest time of pickup"/>
             </div>
