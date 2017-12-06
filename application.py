@@ -90,7 +90,7 @@ def order():
             etime = request.form.get("etime")
 
         # checks if valid times
-        timecheck(otime, etime)
+        timecheck(type, otime, etime)
 
         # checks if user entered airport
         if not request.form.get("airport"):
@@ -111,15 +111,15 @@ def order():
                    userid=id, airport=airport, date=date, otime=otime, number=number, etime=etime, type=type )
 
         # insert into history
-        db.execute("INSERT INTO history (rideid, userid) VALUES (:rideid, :userid)", rideid=rows, userid = id)
+        db.execute("INSERT INTO history (rideid, userid) VALUES (:rideid, :userid)", rideid=rows, userid=id)
 
         matched = match(rows)
 
-        return render_template("ordered.html", matched = matched)
+        return render_template("ordered.html", matched=matched)
 
 
     if request.method == "GET":
-        return render_template("order.html", type = session["type"])
+        return render_template("order.html", type=session["type"])
 
 
 @app.route("/history", methods=["GET", "POST"])
@@ -151,7 +151,7 @@ def history():
 def login():
     """Log user in"""
 
-    # Forget any userid
+    # Forget any user_id
     session.clear()
 
     # User reached route via POST (as by submitting a form via POST)
@@ -169,15 +169,8 @@ def login():
         rows = db.execute("SELECT * FROM users WHERE username = :username",
                           username=request.form.get("username"))
 
-        print("HERE")
-        print(rows)
-
-        if rows == None:
-            print("NOW HERE")
-            return apology("invalid username", 403)
-
         # Ensure username exists and password is correct
-        if not check_password_hash(rows[0]["password"], request.form.get("password")):
+        if len(rows) != 1 or not check_password_hash(rows[0]["password"], request.form.get("password")):
             return apology("invalid username and/or password", 403)
 
         # Remember which user has logged in
@@ -366,7 +359,7 @@ def update2():
                 etime = request.form.get("etime")
                 otime = request.form.get("otime")
             # checks times
-            timecheck(otime, etime)
+            timecheck(type, otime, etime)
             db.execute("UPDATE requests SET otime=:new WHERE rideid = :id", new = otime, id = rideid)
 
         # regets data in case of change
@@ -377,7 +370,7 @@ def update2():
         if request.form.get("etime"):
             etime = request.form.get("etime")
             # checks times
-            timecheck(otime, etime)
+            timecheck(type,otime, etime)
             db.execute("UPDATE requests SET etime=:new WHERE rideid = :id", new = etime, id = rideid)
 
         # checks if user entered airport
@@ -695,7 +688,7 @@ def match(rideid):
         matched = False
         return matched
 
-def timecheck(otime, etime):
+def timecheck(type, otime, etime):
     # checks if valid times
     if type == "0":
         if otime < etime:
