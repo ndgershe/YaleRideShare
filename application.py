@@ -7,7 +7,7 @@ from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
 import smtplib
 
-from helpers import apology, login_required
+from helpers import apology, login_required, twelvey
 # Configure application
 app = Flask(__name__)
 
@@ -30,7 +30,6 @@ Session(app)
 db = SQL("postgres://czznryphemnxjs:4a6625d3983a3befabf184350cfc1d43b1d285b396838bb7255421f1f32c3267@ec2-184-73-206-155.compute-1.amazonaws.com:5432/d36i73dhm3jssb")
 
 @app.route("/")
-#@login_required
 def home():
     try:
         id = session["user_id"]
@@ -108,10 +107,11 @@ def order():
 
         # insert
         rows = db.execute("INSERT INTO requests (userid, airport, date, otime, number, etime, type) VALUES (:userid, :airport, :date, :otime, :number, :etime, :type)",
-                   userid=id, airport=airport, date=date, otime=otime, number=number, etime=etime, type=type )
+                          userid=id, airport=airport, date=date, otime=otime, number=number, etime=etime, type=type )
 
         # insert into history
-        db.execute("INSERT INTO history (rideid, userid) VALUES (:rideid, :userid)", rideid=rows, userid=id)
+        db.execute("INSERT INTO history (rideid, userid, type, airport, date) VALUES (:rideid, :userid, :type, :airport, :date)",
+                   rideid=rows, userid=id, airport=airport, date=date, type=type)
 
         matched = match(rows)
 
@@ -136,7 +136,7 @@ def history():
      # User reached route via GET (as by clicking a link or via redirect)
     else:
         # stores index
-        rides = db.execute("SELECT * FROM history JOIN requests ON history.rideid = requests.rideid WHERE history.userid = :userid", userid=session["user_id"])
+        rides = db.execute("SELECT * FROM history WHERE userid = :userid", userid=session["user_id"])
 
         if rides != None:
             return render_template("history.html", rides=rides)
@@ -273,9 +273,9 @@ def cancel():
     if request.method == "POST":
         rideid = request.form.get("rideid")
         # update history
-        db.execute("UPDATE history SET status=:new WHERE rideid = :id", new = "Cancelled", id = rideid)
+        db.execute("UPDATE history SET status=:new WHERE rideid = :id", new="Cancelled", id=rideid)
         # delete from requests
-        db.execute("DELETE FROM requests WHERE rideid = :rideid", rideid = rideid)
+        db.execute("DELETE FROM requests WHERE rideid = :rideid", rideid=rideid)
         return redirect("/")
 
     # User reached route via GET (as by clicking a link or via redirect)
@@ -323,8 +323,7 @@ def update():
     # User reached route via GET (as by clicking a link or via redirect)
     else:
         id = session["user_id"]
-        rides = db.execute(
-            "SELECT * FROM requests WHERE userid = :id", id=id)
+        rides = db.execute("SELECT * FROM requests WHERE userid = :id", id=id)
         return render_template("update.html", rides=rides)
 
 @app.route("/update2", methods=["GET", "POST"])
@@ -435,10 +434,7 @@ def settings():
             db.execute("UPDATE users SET email=:email WHERE userid = :id", email = request.form.get("email"), id = id)
 
         if request.form.get("phone"):
-            # What is this line doing? Did you mean 386?
-            # phone = phone(request.form.get("phone"))
-
-            phone = request.form.get("phone")
+            phone = phonec(request.form.get("phone"))
             db.execute("UPDATE users SET phone=:phone WHERE userid = :id", phone = phone, id = id)
 
         # checks if user entered passwords
@@ -574,20 +570,21 @@ def phonec(phone):
             num_digits = 0
             dash = False
 
-            for i in range(len(phone)):
-                if (i == 3 or i == 7) and phone[i] == "-":
-                    dash = True
-                    continue
-                elif not phone[i].isdigit():
+            if phone[0] != "(":
+                for i in range(len(phone)):
+                    if (i == 3 or i == 7) and phone[i] == "-":
+                        dash = True
+                        continue
+                    elif not phone[i].isdigit():
+                        return apology("Must enter valid phone number", 400)
+
+                    num_digits = num_digits + 1
+
+                if num_digits != 10:
                     return apology("Must enter valid phone number", 400)
 
-                num_digits = num_digits + 1
-
-            if num_digits != 10:
-                return apology("Must enter valid phone number", 400)
-
-            if not dash:
-                phone = '-'.join([phone[:3], phone[3:6], phone[6:]])
+                if not dash:
+                    phone = '-'.join([phone[:3], phone[3:6], phone[6:]])
             return phone
 
 
@@ -705,7 +702,6 @@ def errorhandler(e):
 # listen for errors
 for code in default_exceptions:
     app.errorhandler(code)(errorhandler)
-
 
 if __name__ == "__main__":
     app.run()

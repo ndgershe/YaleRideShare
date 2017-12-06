@@ -7,20 +7,20 @@
 {% block main %}
     <p>
        <b>Here is your current ride information:</b><br />
-       Airport: {{ airport }}<br />
-       Date: {{ date }}<br />
-       Optimal time: {{ otime }}<br />
-       {% if type == "Departure" %}
+        Airport: {{ airport }}<br />
+        Date: {{ date }}<br />
+        Optimal time: {{ otime }}<br />
+        {% if type == "Departure" %}
             Earliest time: {{ etime }}<br />
         {% else %}
             Latest time: {{ etime }}<br />
         {% endif %}
-       Number of people: {{ number }}<br />
-       Type: {{ type }}<br />
+        Number of people: {{ number }}<br />
+        Type: {{ type }}<br />
    </p>
    <small>**Leave the fields you don't want to change blank**</small></br>
      <form action="/update2" method="post">
-         <b>Type</b>
+         <b>Current Type:{% if type == "0" %}Departure{% else %}Arrival{% endif %}</b>
          <div class="form-group">
             <select name = "type">
                 <option value="" disabled selected>--Departure or Arrival--</option>
@@ -28,7 +28,7 @@
                 <option value="1">Arrival</option>
             </select>
         </div>
-        <b>Airport</b>
+        <b>Current Airport: {{ airport }}</b>
         <div class="form-group">
             <select name = "airport">
                 <option value="" disabled selected>--Select your airport--</option>
@@ -40,15 +40,16 @@
                 <option value="HPN">Westchester County Airport (HPN)</option>
             </select>
         </div>
-        <b>Date</b>
+        <b>Current Date: {{ date }}</b>
         <div class="form-group">
             <input autocomplete="off" autofocus class="form-control" name="date" type="date" placeholder="Date"/>
         </div>
-        <b>Optimal Pickup Time</b></br>
+        <b>Current Optimal Pickup Time: {{ otime }}</b></br>
         <small>In format: HH:MM:AM/PM</small>
         <div class="form-group">
             <input autocomplete="off" autofocus class="form-control" name="otime" type="time" placeholder="Optimal time of pickup"/>
         </div>
+        <b>Current Number: {{ number }}
         <div class="form-group">
             <select name = "number">
                 <option value="" disabled selected>--Number of passengers in your party--</option>
@@ -61,13 +62,13 @@
             </select>
         </div>
         {% if type == "Departure" %}
-        <b>Earliest Time of Pickup</b></br>
+        <b>Current Earliest Pickup Time: {{ etime }}</b></br>
             <small>In format: HH:MM:AM/PM</small>
             <div class="form-group">
                 <input autocomplete="off" autofocus class="form-control" name="etime" type="time" placeholder="Earliest time of pickup"/>
             </div>
         {% else %}
-            <b>Latest Time of Pickup</b></br>
+            <b>Current Latest Pickup Time: {{ etime }}</b></br>
             <small>In format: HH:MM:AM/PM</small>
             <div class="form-group">
                 <input autocomplete="off" autofocus class="form-control" name="etime" type="time" placeholder="Latest time of pickup"/>
