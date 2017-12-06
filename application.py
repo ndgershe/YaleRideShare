@@ -67,7 +67,54 @@ def order():
 
     if request.method == "POST":
 
-        matched = orderer(session["type"])
+        id = session["user_id"]
+
+        type = session["type"]
+
+        # checks if user entered date
+        if not request.form.get("date"):
+            return apology("must provide date", 400)
+        else:
+            date = request.form.get("date")
+
+        # checks if user entered optimal time
+        if not request.form.get("otime"):
+            return apology("must provide optimal time", 400)
+        else:
+            otime = request.form.get("otime")
+
+        # checks if user entered wait time time
+        if not request.form.get("etime"):
+            return apology("must provide time", 400)
+        else:
+            etime = request.form.get("etime")
+
+        # checks if valid times
+        timecheck(otime, etime)
+
+        # checks if user entered airport
+        if not request.form.get("airport"):
+            return apology("must provide airport", 400)
+        else:
+            airport = request.form.get("airport")
+
+        # checks if user entered number of passengers
+        if not request.form.get("number"):
+            return apology("must provide number of passengers", 400)
+        else:
+            number = int(request.form.get("number"))
+
+        fnumber = 6 - number
+
+        # insert
+        rows = db.execute("INSERT INTO requests (userid, airport, date, otime, number, etime, type) VALUES (:userid, :airport, :date, :otime, :number, :etime, :type)",
+                   userid=id, airport=airport, date=date, otime=otime, number=number, etime=etime, type=type )
+
+        # insert into history
+        db.execute("INSERT INTO history (rideid, userid) VALUES (:rideid, :userid)", rideid=rows, userid = id)
+
+        matched = match(rows)
+
         return render_template("ordered.html", matched = matched)
 
 
@@ -306,27 +353,42 @@ def update2():
             type = request.form.get("type")
             db.execute("UPDATE requests SET type=:new WHERE rideid = :id", new = type, id = rideid)
 
+        # gets current etime and type
+        user = db.execute("SELECT * FROM requests WHERE rideid = :id", id = rideid)[0]
+        etime = user["etime"]
+        type = user["type"]
 
         # checks if user entered optimal time
         if request.form.get("otime"):
             otime = request.form.get("otime")
+            # if the user is changing both
+            if request.form.get("etime") and request.form.get("otime"):
+                etime = request.form.get("etime")
+                otime = request.form.get("otime")
+            # checks times
+            timecheck(otime, etime)
             db.execute("UPDATE requests SET otime=:new WHERE rideid = :id", new = otime, id = rideid)
 
+        # regets data in case of change
+        user = db.execute("SELECT * FROM requests WHERE rideid = :id", id = rideid)[0]
+        otime = user["otime"]
 
         # checks if user entered wait time time
         if request.form.get("etime"):
             etime = request.form.get("etime")
+            # checks times
+            timecheck(otime, etime)
             db.execute("UPDATE requests SET etime=:new WHERE rideid = :id", new = etime, id = rideid)
 
         # checks if user entered airport
         if request.form.get("airport"):
-            airport = request.form.get
+            airport = request.form.get("airport")
             db.execute("UPDATE requests SET airport=:new WHERE rideid = :id", new = airport, id = rideid)
 
         # checks if user entered number of passengers
         if request.form.get("number"):
             number = int(request.form.get("number"))
-            db.execute("UPDATE requests SET airport=:new WHERE rideid = :id", new = airport, id = rideid)
+            db.execute("UPDATE requests SET number=:new WHERE rideid = :id", new = number, id = rideid)
 
 
         matched = match(rideid)
@@ -427,47 +489,6 @@ def settings():
 
         return render_template("settings.html", username=username, fname=fname, sname=sname, email=email, phone=phone)
 
-@app.route("/password", methods=["GET", "POST"])
-@login_required
-def password():
-    """Allows user to change password"""
-
-    # User reached route via POST (as by submitting a form via POST)
-    if request.method == "POST":
-
-        id=session["user_id"]
-
-        # checks if user entered passwords
-        if not request.form.get("oldpass"):
-            return apology("must provide old password", 400)
-        elif not request.form.get("newpass"):
-            return apology("must enter new password", 400)
-        elif not request.form.get("verification"):
-            return apology("must verify password", 400)
-        else:
-            # stores passwords
-            oldpass = request.form.get("oldpass")
-            newpass = request.form.get("newpass")
-            verification = request.form.get("verification")
-
-            row = db.execute("SELECT password FROM users WHERE userid = :id", id=id)
-
-            # ensure user inputs valid information
-            if not check_password_hash(row[0]["password"], oldpass):
-                return apology("old password is incorrect", 400)
-
-            if newpass != verification:
-                return apology("new passwords must match", 400)
-
-            # update password
-            newpass = generate_password_hash(newpass)
-            db.execute("UPDATE users SET password=:newpass WHERE userid = :id", newpass = newpass, id = id)
-
-        return redirect("/")
-
-    # User reached route via GET (as by clicking a link or via redirect)
-    else:
-        return render_template("password.html")
 
 @app.route("/closest", methods=["GET", "POST"])
 @login_required
@@ -576,53 +597,6 @@ def phonec(phone):
                 phone = '-'.join([phone[:3], phone[3:6], phone[6:]])
             return phone
 
-def orderer(type):
-
-    id = session["user_id"]
-
-    # Check to make sure info was input
-
-    # checks if user entered date
-    if not request.form.get("date"):
-        return apology("must provide date", 400)
-    else:
-        date = request.form.get("date")
-
-    # checks if user entered optimal time
-    if not request.form.get("otime"):
-        return apology("must provide optimal time", 400)
-    else:
-        otime = request.form.get("otime")
-
-    # checks if user entered wait time time
-    if not request.form.get("etime"):
-        return apology("must provide time", 400)
-    else:
-        etime = request.form.get("etime")
-
-    # checks if user entered airport
-    if not request.form.get("airport"):
-        return apology("must provide airport", 400)
-    else:
-        airport = request.form.get("airport")
-
-    # checks if user entered number of passengers
-    if not request.form.get("number"):
-        return apology("must provide number of passengers", 400)
-    else:
-        number = int(request.form.get("number"))
-
-    fnumber = 6 - number
-
-    # insert
-    rows = db.execute("INSERT INTO requests (userid, airport, date, otime, number, etime, type) VALUES (:userid, :airport, :date, :otime, :number, :etime, :type)",
-               userid=id, airport=airport, date=date, otime=otime, number=number, etime=etime, type=type )
-
-    # insert into history
-    db.execute("INSERT INTO history (rideid, userid) VALUES (:rideid, :userid)", rideid=rows, userid = id)
-
-    return match(rows)
-
 
 def match(rideid):
 
@@ -695,9 +669,9 @@ def match(rideid):
             message = message + "\n" + names[i] +"\'s optimum time is " + times[i]  + "\n     email: " + emails[i] + " phone #: " + phones[i] + "\n"
 
         # gets user email
-        user = db.execute("SELECT email FROM users WHERE userid=:userid", userid = id)[0]
+        user = db.execute("SELECT * FROM users WHERE userid=:userid", userid = id)[0]
         email = user["email"]
-
+        print(message)
         # sends email to person who requested a ride
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
@@ -710,7 +684,7 @@ def match(rideid):
 
         # create message for matches
         message = "Somebody matched with your uber request! Here is their information: \n" + name + "'s optimum time is " + otime  + "\n     email: " + email + " phone #: " + phone + "\n"
-
+        print(message)
         # sends email to all matches
         for i in emails:
             server.sendmail("yaleubershare@gmail.com", i, message)
@@ -721,6 +695,14 @@ def match(rideid):
         matched = False
         return matched
 
+def timecheck(otime, etime):
+    # checks if valid times
+    if type == "0":
+        if otime < etime:
+             return apology("Earliest time must be earlier than optimum time", 400)
+    else:
+        if otime > etime:
+             return apology("Latest time must be later than optimum time", 400)
 
 def errorhandler(e):
     """Handle error"""

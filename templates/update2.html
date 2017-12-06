@@ -18,6 +18,7 @@
        Number of people: {{ number }}<br />
        Type: {{ type }}<br />
    </p>
+   <small>**Leave the fields you don't want to change blank**</small></br>
      <form action="/update2" method="post">
          <b>Type</b>
          <div class="form-group">
@@ -43,7 +44,8 @@
         <div class="form-group">
             <input autocomplete="off" autofocus class="form-control" name="date" type="date" placeholder="Date"/>
         </div>
-        <b>Optimal Pickup Time</b>
+        <b>Optimal Pickup Time</b></br>
+        <small>In format: Hour:Minute:PM/AM</small>
         <div class="form-group">
             <input autocomplete="off" autofocus class="form-control" name="otime" type="time" placeholder="Optimal time of pickup"/>
         </div>
