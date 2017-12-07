@@ -7,7 +7,7 @@
 {% block main %}
    <small>**Leave the fields you don't want to change blank**</small></br>
      <form action="/update2" method="post">
-        <b>Current Type:{% if type == "0" %}Departure{% else %}Arrival{% endif %}</b>
+        <b>Current Type: {% if type == "0" %}Departure{% else %}Arrival{% endif %}</b>
         <div class="form-group">
             <select name = "type">
                 <option value="" disabled selected>--Departure or Arrival--</option>

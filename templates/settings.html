@@ -5,34 +5,31 @@
 {% endblock %}
 
 {% block main %}
-    <p>
-       <b>Here is your current information:</b><br />
-       Username: {{ username }}<br />
-       First Name: {{ fname }}<br />
-       Surname: {{ sname }}<br />
-       Email: {{ email }}<br />
-       Phone Number: {{ phone }}<br />
-   </p>
    <small>**Leave the fields you don't want to change blank**</small></br>
     <form action="/settings" method="post">
         <fieldset>
             <legend>Change Information</legend>
-             <div class="form-group">
+            <b>Current Username: {{ username }}</b>
+            <div class="form-group">
                 <input autocomplete="off" autofocus class="form-control" name="username" placeholder="Username" type="text"/>
             </div>
+            <b>Current First Name: {{ fname }}</b>
             <div class="form-group">
                 <input class="form-control" name="fname" placeholder="First Name" type="text"/>
             </div>
+            <b>Current Last Name: {{ sname }}</b>
             <div class="form-group">
                 <input class="form-control" name="surname" placeholder="Last Name" type="text"/>
             </div>
+            <b>Current Email: {{ email }}</b>
             <div class="form-group">
                 <input class="form-control" name="email" placeholder="Email Address" type="email"/>
             </div>
+            <b>Current Phone Number: {{ phone }}</b>
             <div class="form-group">
                 <input class="form-control" name="phone" placeholder="Phone Number" type="text"/>
             </div>
-            <legend>Change Password</legend>
+            <legend><b>Change Password</b></legend>
             <div class="form-group">
                 <input class="form-control" name="oldpass" placeholder="Old Password" type="password"/>
             </div>

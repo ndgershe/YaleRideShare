@@ -45,8 +45,6 @@ def home():
         return render_template("home.html")
 
 
-
-
 @app.route("/new_order", methods=["GET", "POST"])
 @login_required
 def new_order():
@@ -55,7 +53,6 @@ def new_order():
     if request.method == "POST":
         if request.form.get("type"):
             session["type"] = request.form.get("type")
-            print (session["type"])
             return redirect("/order")
         else:
             return apology("Must select arrival or departure", 400)
@@ -257,8 +254,6 @@ def register():
          # Query database for username
         rows = db.execute("SELECT * FROM users WHERE username = :username", username=username)
 
-        print(rows)
-
         # Remember which user has logged in
         session["user_id"] = rows[0]["userid"]
 
@@ -288,7 +283,6 @@ def cancel():
     # User reached route via GET (as by clicking a link or via redirect)
     else:
         id = session["user_id"]
-        print(id)
         rides = db.execute(
             "SELECT * FROM requests WHERE userid = :id", id=id)
         return render_template("cancel.html", rides=rides)
@@ -312,7 +306,6 @@ def complete():
     # User reached route via GET (as by clicking a link or via redirect)
     else:
         id = session["user_id"]
-        print(id)
         rides = db.execute(
             "SELECT * FROM requests WHERE userid = :id", id=id)
         return render_template("complete.html", rides=rides)
@@ -525,7 +518,6 @@ def closest():
             times = []
             for i in rows:
                 i = i.get('rideid')
-                print(db.execute("SELECT etime FROM requests WHERE rideid = :i", i = i)[0])
                 time = dict(db.execute("SELECT etime FROM requests WHERE rideid = :i", i = i)[0])
                 times.append( time.get('etime'))
 
@@ -672,8 +664,7 @@ def match(rideid):
         # gets user email
         user = db.execute("SELECT * FROM users WHERE userid=:userid", userid = id)[0]
         email = user["email"]
-        print(message)
-        print(isinstance(message, str))
+
         # sends email to person who requested a ride
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
@@ -695,7 +686,7 @@ def match(rideid):
         # sends email to all matches
         for i in emails:
             server.sendmail("yaleubershare@gmail.com", i, message)
-            print(f"email was supposedly sent to {i}")
+
         matched = True
         return matched
     else:
