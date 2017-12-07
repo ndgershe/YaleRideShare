@@ -11,8 +11,8 @@
         </br>
         And make sure to mark your ride as complete!
     </p>
-    <form action="/complete" method="post">
-        <select name = "rideid">
+    <form action="/complete" method="post" id="complete">
+        <select name = "rideid" id="rideid">
             <option value="" disabled selected>--Select Ride to Complete--</option>
             {% for ride in rides %}
                 {% if ride.type == 0 %}
@@ -25,4 +25,5 @@
         </select>
         <button class="btn btn-primary" type="submit">Mark Ride as Complete</button>
     </form>
+    <script type="text/javascript" src="/static/apology_complete.js"></script>
 {% endblock %}

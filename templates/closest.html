@@ -9,8 +9,8 @@
         <b>No matches?</b><br />
         Here you can find who has the closest time to you in case you want to lengthen your wait time
     </p>
-    <form action="/closest" method="post">
-        <select name = "rideid">
+    <form action="/closest" method="post" id="closest">
+        <select name = "rideid" id="rideid">
             <option value="" disabled selected>--Select ride to find closest time to--</option>
             {% for ride in rides %}
                 {% if ride.type == 0 %}
@@ -23,4 +23,5 @@
         </select>
         <button class="btn btn-primary" type="submit">Find</button>
     </form>
+    <script type="text/javascript" src="/static/apology_closest.js"></script>
 {% endblock %}

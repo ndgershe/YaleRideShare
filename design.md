@@ -1,22 +1,28 @@
-The database is set up with a users table and a request table. When information
+The database is set up with a users table, a request table and a history table. When information
 about users for emails is needed it can be retrieved by joining the requests and users
-tables at userid.
+tables at userid. The history table and users table do have some shared information which is
+redundant but we found this redundancy worth it as oppossed to having to join history and
+requests every time the date, type, and airport were needed. Rides stay in history longer than
+they stay in rides since they stay in history after they are completed/cancelled.
 
 When a user registers, application.py gets information from register.html and checks
 that all of the data is there. For the phone number, it checks that it is a valid 10
 digit phone number (handles dashes) and then formats the number with dashes before
 it is entered into the data base. We did this formatting here just so the number would
-look nicer in emails. The password is hashed and the username is made sure
-to be not taken. If any of these conditions are not met, an error will occur. After all
-the information is inserted into the data base under users, the userid is remembered.
+look nicer in emails. This is all in the phonec function as it is also called later in
+update2. The password is hashed and the username is made sureto be not taken. If any of
+these conditions are not met, an error will occur. After all the information is inserted
+into the data base under users, the userid is remembered.
 
-Order is the most complex part of our project. First the order_D_or_A.html gets if the
+Order is one of the most complex parts of our project. First the order_D_or_A.html gets if the
 type of trip (departure or arrival ). We used 0 to represent departure and 1 to represent
 arrival since ints use less space than the strings. The type of trip matters since it
-determines if we ask for eaarliest or latest time to be picked up and if location is needed.
-Depending on the type of trip the user is redirected to another order page which gathers all
+determines if we ask for earliest or latest time to be picked up and the algorithm used for matching.
+The user is redirected to another order page which gathers the rest of the
 the neccessary data for a trip. It returns an error if any of the data is not there.
-Then the ride data is inserted into the database under requests. Then a select command searches
+It checks to make sure that earliest time/ latest time are logical in the function timecheck.
+This is a function because it is also called in update2.
+Then the ride data is inserted into the database under requests. Then a match function is called which searches
 for matches in the requests database. It ensures that the user is different, the non time ride
 information is all the same and with an OR statement finds time ranges that overlap with the time
 range of the user.
@@ -33,8 +39,8 @@ Was created so the user can see if they want to extend their wait time to match 
 user is prompted to select which of their rides they want to find the closest ride to. Then all the information from this
 ride is retrieved and put into a search for any rides that match the ride information without specification to time. Then
 these rides are ordered in the same way as in Order and the closest match is displayed to the user using a parsed string that
-is edited for arrivals/departures. Each variable is called individually because they need to be casted as a dict in order to
-get only the value of the object.
+is edited for arrivals/departures.
 
-Settings simply is a way to change the user's password. The old password is checked for correctness and new password and
+Settings shows all of the users current information and allows it to be changed.
+change the user's password. The old password is checked for correctness and new password and
 verification are checked to ensure that they are the same and then the password is hashed and the user is updated in the database.

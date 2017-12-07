@@ -9,9 +9,9 @@
         <b>Here you can request for your ride to be matched.</b><br />
         First we need to know what type of ride it is:
     </p>
-    <form action="/new_order" method="post">
+    <form action="/new_order" method="post" id="order">
         <div class="form-group">
-            <select name = "type">
+            <select name = "type" id="type">
                 <option value="" disabled selected>--Departure or Arrival--</option>
                 <option value="0">Departure</option>
                 <option value="1">Arrival</option>
@@ -19,4 +19,5 @@
         </div>
         <button class="btn btn-primary" type="submit">Submit</button>
     </form>
+    <script type="text/javascript" src="/static/apology_order_D_or_A.js"></script>
 {% endblock %}

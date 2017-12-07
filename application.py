@@ -6,10 +6,15 @@ from werkzeug.exceptions import default_exceptions
 from werkzeug.security import check_password_hash, generate_password_hash
 from datetime import datetime
 import smtplib
+import string
 
 from helpers import apology, login_required, twelvey
 # Configure application
 app = Flask(__name__)
+
+# create filter
+
+app.jinja_env.filters["twelvey"] = twelvey
 
 # Ensure responses aren't cached
 if app.config["DEBUG"]:
@@ -271,6 +276,8 @@ def cancel():
 
     # User reached route via POST (as by submitting a form via POST)
     if request.method == "POST":
+        if not request.form.get("rideid"):
+            return apology("Must select ride", 400)
         rideid = request.form.get("rideid")
         # update history
         db.execute("UPDATE history SET status=:new WHERE rideid = :id", new="Cancelled", id=rideid)
@@ -293,6 +300,8 @@ def complete():
 
     # User reached route via POST (as by submitting a form via POST)
     if request.method == "POST":
+        if not request.form.get("rideid"):
+            return apology("Must select ride", 400)
         rideid = request.form.get("rideid")
         # update history
         db.execute("UPDATE history SET status=:new WHERE rideid = :id", new = "Complete", id = rideid)
@@ -542,17 +551,17 @@ def closest():
             phone =  user["phone"]
             time =  user["etime"]
 
-            message = "Here is the information for the person with the closest match:"
+            message = ["Here is the information for the person with the closest match:"]
             # creates message for departure
             if type == 0:
-                message = message + "<br>" + name +"\'s earliest time is " + time  + "<b>email: " + email + "<br>phone #: " + phone + "<br>"
+                message = message + ["\n"] + [name] + ["\'s earliest time is "] + [time]  + ["\n"] + ["email: "] + [email] + ["\n"] + ["phone #: "] + [phone] + ["\n"]
             # creates message for arrival
             else:
-                message = message + "<br>" + name +"\'s latestt time is " + time  + "<br>email: " + email + "<br>phone #: " + phone + "<br>"
+                message = message + ["\n"] + [name] + ["\'s latest time is "] + [time]  + ["\n"] + ["email: "] + [email] + ["\n"] + ["phone #: "] + [phone] + ["\n"]
 
         # if nobody matched
         else:
-            message = "Sorry, there is nobody who matches your request"
+            message = ["Sorry, there is nobody who matches your request"]
 
 
         return render_template("closested.html", message=message)
@@ -638,7 +647,9 @@ def match(rideid):
             rides.append( zipped[i][0])
 
         # begins message of email
-        message = "We found one or more matches:"
+        message = """Subject: Uber Match!
+
+        We found one or more matches -"""
 
         emails = []
         names = []
@@ -656,12 +667,13 @@ def match(rideid):
         # creates message of all info
         n = len(rides)
         for i in range(n):
-            message = message + "\n" + names[i] +"\'s optimum time is " + times[i]  + "\n     email: " + emails[i] + " phone #: " + phones[i] + "\n"
+            message = message + "\n     " + names[i] +"\'s optimum time is " + times[i]  + "\n     email  - " + emails[i] + " phone # - " + phones[i] + "\n"
 
         # gets user email
         user = db.execute("SELECT * FROM users WHERE userid=:userid", userid = id)[0]
         email = user["email"]
         print(message)
+        print(isinstance(message, str))
         # sends email to person who requested a ride
         server = smtplib.SMTP("smtp.gmail.com", 587)
         server.starttls()
@@ -673,8 +685,13 @@ def match(rideid):
         phone = user["phone"]
 
         # create message for matches
-        message = "Somebody matched with your uber request! Here is their information: \n" + name + "'s optimum time is " + otime  + "\n     email: " + email + " phone #: " + phone + "\n"
-        print(message)
+        message = """Subject: Uber Match!
+
+        Somebody matched with your uber request!"""
+
+        message = message + "\n Here is their information - \n" + name + "'s optimum time is " + otime  + "\n     email - " + email + " phone # - " + phone
+
+
         # sends email to all matches
         for i in emails:
             server.sendmail("yaleubershare@gmail.com", i, message)

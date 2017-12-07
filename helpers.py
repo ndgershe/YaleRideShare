@@ -1,6 +1,6 @@
 import csv
 import urllib.request
-import time
+from datetime import date
 
 from flask import redirect, render_template, request, session
 from functools import wraps
@@ -37,4 +37,4 @@ def login_required(f):
 
 def twelvey(time):
     """Formats time as 12 Hour"""
-    return strftime("%I:%M %p", time)
+    return date.strftime("%I:%M %p", time)

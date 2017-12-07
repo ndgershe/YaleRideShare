@@ -5,23 +5,10 @@
 {% endblock %}
 
 {% block main %}
-    <p>
-       <b>Here is your current ride information:</b><br />
-        Airport: {{ airport }}<br />
-        Date: {{ date }}<br />
-        Optimal time: {{ otime }}<br />
-        {% if type == "Departure" %}
-            Earliest time: {{ etime }}<br />
-        {% else %}
-            Latest time: {{ etime }}<br />
-        {% endif %}
-        Number of people: {{ number }}<br />
-        Type: {{ type }}<br />
-   </p>
    <small>**Leave the fields you don't want to change blank**</small></br>
      <form action="/update2" method="post">
-         <b>Current Type:{% if type == "0" %}Departure{% else %}Arrival{% endif %}</b>
-         <div class="form-group">
+        <b>Current Type:{% if type == "0" %}Departure{% else %}Arrival{% endif %}</b>
+        <div class="form-group">
             <select name = "type">
                 <option value="" disabled selected>--Departure or Arrival--</option>
                 <option value="0">Departure</option>
