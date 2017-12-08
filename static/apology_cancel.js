@@ -6,4 +6,9 @@ let form = document.getElementById("cancel");
                     alert("please choose a ride");
                     return false;
                 }
+                else
+                {
+                    alert("your ride has been cancelled")
+                    return true;
+                }
             };

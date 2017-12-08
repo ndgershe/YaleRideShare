@@ -91,7 +91,10 @@ def order():
             etime = request.form.get("etime")
 
         # checks if valid times
-        timecheck(type, otime, etime)
+        if timecheck(type, otime, etime) == "e":
+            return apology("Earliest time must be earlier than optimum time", 400)
+        elif timecheck(type, otime, etime) == "l":
+            return apology("Latest time must be later than optimum time", 400)
 
         # checks if user entered airport
         if not request.form.get("airport"):
@@ -239,6 +242,8 @@ def register():
             return apology("Must enter phone number", 400)
 
         # checks if valid phone number
+        if phonec(phone) == "fail":
+            return apology("Must enter valid 10 digit phone number", 400)
         phone = phonec(phone)
 
         # hashes password
@@ -360,7 +365,10 @@ def update2():
                 etime = request.form.get("etime")
                 otime = request.form.get("otime")
             # checks times
-            timecheck(type, otime, etime)
+            if timecheck(type, otime, etime) == "e":
+                return apology("Earliest time must be earlier than optimum time", 400)
+            elif timecheck(type, otime, etime) == "l":
+                return apology("Latest time must be later than optimum time", 400)
             db.execute("UPDATE requests SET otime=:new WHERE rideid = :id", new = otime, id = rideid)
 
         # regets data in case of change
@@ -371,7 +379,10 @@ def update2():
         if request.form.get("etime"):
             etime = request.form.get("etime")
             # checks times
-            timecheck(type,otime, etime)
+            if timecheck(type, otime, etime) == "e":
+                return apology("Earliest time must be earlier than optimum time", 400)
+            elif timecheck(type, otime, etime) == "l":
+                return apology("Latest time must be later than optimum time", 400)
             db.execute("UPDATE requests SET etime=:new WHERE rideid = :id", new = etime, id = rideid)
 
         # checks if user entered airport
@@ -436,6 +447,9 @@ def settings():
             db.execute("UPDATE users SET email=:email WHERE userid = :id", email = request.form.get("email"), id = id)
 
         if request.form.get("phone"):
+            phone = request.form.get("phone")
+            if phonec(phone) == "fail":
+                return apology("Must enter valid 10 digit phone number", 400)
             phone = phonec(request.form.get("phone"))
             db.execute("UPDATE users SET phone=:phone WHERE userid = :id", phone = phone, id = id)
 
@@ -509,17 +523,22 @@ def closest():
         # set fnumber - make sure don't exceed uber capacity
         fnumber = 6 - number
 
-        # search for matches
-        rows = db.execute("SELECT rideid FROM requests WHERE airport = :airport AND date = :date AND type = :type AND userid != :id",
-                            airport = airport, date = date, type = type, id = id)
+        if type == "0":
+            # search for matches for departure
+            rows = db.execute("SELECT rideid FROM requests WHERE airport = :airport AND date = :date AND type = :type AND otime < :etime AND userid != :id",
+                            airport = airport, date = date, type = type, etime = etime, id = id)
+        else:
+            # search for matches for arrival
+            rows = db.execute("SELECT rideid FROM requests WHERE airport = :airport AND date = :date AND type = :type AND otime > :etime AND userid != :id",
+                        airport = airport, date = date, type = type, etime = etime, id = id)
 
         if rows:
             # makes list of times
             times = []
             for i in rows:
                 i = i.get('rideid')
-                time = dict(db.execute("SELECT etime FROM requests WHERE rideid = :i", i = i)[0])
-                times.append( time.get('etime'))
+                time = dict(db.execute("SELECT otime FROM requests WHERE rideid = :i", i = i)[0])
+                times.append( time.get('otime'))
 
             # makes list of time differences
             diffs = []
@@ -545,11 +564,7 @@ def closest():
 
             message = ["Here is the information for the person with the closest match:"]
             # creates message for departure
-            if type == 0:
-                message = message + ["\n"] + [name] + ["\'s earliest time is "] + [time]  + ["\n"] + ["email: "] + [email] + ["\n"] + ["phone #: "] + [phone] + ["\n"]
-            # creates message for arrival
-            else:
-                message = message + ["\n"] + [name] + ["\'s latest time is "] + [time]  + ["\n"] + ["email: "] + [email] + ["\n"] + ["phone #: "] + [phone] + ["\n"]
+            message = message + ["\n"] + [name] + ["\'s optimal time is "] + [time]  + ["\n"] + ["email: "] + [email] + ["\n"] + ["phone #: "] + [phone] + ["\n"]
 
         # if nobody matched
         else:
@@ -573,16 +588,16 @@ def phonec(phone):
 
             if phone[0] != "(":
                 for i in range(len(phone)):
-                    if (i == 3 or i == 7) and phone[i] == "-":
+                    if (i == 3 or i == 7) and ( phone[i] == "-" or phone[i]== " "):
                         dash = True
                         continue
                     elif not phone[i].isdigit():
-                        return apology("Must enter valid phone number", 400)
+                        return "fail"
 
                     num_digits = num_digits + 1
 
                 if num_digits != 10:
-                    return apology("Must enter valid phone number", 400)
+                    return "fail"
 
                 if not dash:
                     phone = '-'.join([phone[:3], phone[3:6], phone[6:]])
@@ -659,7 +674,7 @@ def match(rideid):
         # creates message of all info
         n = len(rides)
         for i in range(n):
-            message = message + "\n     " + names[i] +"\'s optimum time is " + times[i]  + "\n     email  - " + emails[i] + " phone # - " + phones[i] + "\n"
+            message = message + "\n     " + names[i] +"\'s optimum time is " + times[i] + " on " + date + "\n     email  - " + emails[i] + " phone # - " + phones[i] + "\n"
 
         # gets user email
         user = db.execute("SELECT * FROM users WHERE userid=:userid", userid = id)[0]
@@ -678,9 +693,9 @@ def match(rideid):
         # create message for matches
         message = """Subject: Uber Match!
 
-        Somebody matched with your uber request!"""
+        Somebody matched with your uber request!\n"""
 
-        message = message + "\n Here is their information - \n" + name + "'s optimum time is " + otime  + "\n     email - " + email + " phone # - " + phone
+        message = message + "\n Here is their information - \n" + name + "'s optimum time is " + otime  + " on " + date + "\n     email - " + email + " phone # - " + phone
 
 
         # sends email to all matches
@@ -697,10 +712,10 @@ def timecheck(type, otime, etime):
     # checks if valid times
     if type == "0":
         if otime < etime:
-             return apology("Earliest time must be earlier than optimum time", 400)
+             return "e"
     else:
         if otime > etime:
-             return apology("Latest time must be later than optimum time", 400)
+             return "l"
 
 def errorhandler(e):
     """Handle error"""

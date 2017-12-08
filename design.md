@@ -3,11 +3,14 @@ about users for emails is needed it can be retrieved by joining the requests and
 tables at userid. The history table and users table do have some shared information which is
 redundant but we found this redundancy worth it as oppossed to having to join history and
 requests every time the date, type, and airport were needed. Rides stay in history longer than
-they stay in rides since they stay in history after they are completed/cancelled.
+they stay in rides since they stay in history after they are completed/cancelled. The history
+page has an option to clear history which just clears history but keeps rides in requests. This
+is another reason why we allowed for some redundancy in the tables. If history had been cleared
+requests wouldn't be able to access airport, date, and type.
 
 When a user registers, application.py gets information from register.html and checks
 that all of the data is there. For the phone number, it checks that it is a valid 10
-digit phone number (handles dashes) and then formats the number with dashes before
+digit phone number (handles dashes and spaces) and then formats the number before
 it is entered into the data base. We did this formatting here just so the number would
 look nicer in emails. This is all in the phonec function as it is also called later in
 update2. The password is hashed and the username is made sureto be not taken. If any of
@@ -22,7 +25,7 @@ The user is redirected to another order page which gathers the rest of the
 the neccessary data for a trip. It returns an error if any of the data is not there.
 It checks to make sure that earliest time/ latest time are logical in the function timecheck.
 This is a function because it is also called in update2.
-Then the ride data is inserted into the database under requests. Then a match function is called which searches
+Then the ride data is inserted into the database under requests and history. Then a match function is called which searches
 for matches in the requests database. It ensures that the user is different, the non time ride
 information is all the same and with an OR statement finds time ranges that overlap with the time
 range of the user.
@@ -44,3 +47,15 @@ is edited for arrivals/departures.
 Settings shows all of the users current information and allows it to be changed.
 change the user's password. The old password is checked for correctness and new password and
 verification are checked to ensure that they are the same and then the password is hashed and the user is updated in the database.
+
+For update request the user can pick a ride to update. They are shown all their current information and basically all the functionality
+of order is used here. The user can change as little or as much of the request as they like and all the same checks and the searching
+algorithm as order are done.
+
+Complete has a link to the uber website so people can request a ride. Complete and cancel are similar in that the user selects a ride
+and then the ride is deleted from requests (so it will no longer be available for matching) and its status is updated in history.
+
+There is some java script functionality in that if a required box is left blank an error will pop up on screen.
+The html was changed to add a background and change the colors to fit our theme. Font sizes were also done in html.
+
+We decided to deploy our program on heroku so we had to use postgress data tables.
